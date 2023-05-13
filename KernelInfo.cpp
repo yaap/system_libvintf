@@ -39,6 +39,9 @@ Level KernelInfo::level() const {
 
 bool KernelInfo::matchKernelConfigs(const std::vector<KernelConfig>& matrixConfigs,
                                     std::string* error) const {
+    std::stringstream ss;
+    ss << "Kernel config errors:";
+    bool configMatches = true;
     for (const KernelConfig& matrixConfig : matrixConfigs) {
         const std::string& key = matrixConfig.first;
         auto it = this->mConfigs.find(key);
@@ -47,21 +50,22 @@ bool KernelInfo::matchKernelConfigs(const std::vector<KernelConfig>& matrixConfi
             if (matrixConfig.second == KernelConfigTypedValue::gMissingConfig) {
                 continue;
             }
-            if (error != nullptr) {
-                *error = "Missing config " + key;
-            }
-            return false;
+            ss << "\n    Missing config " << key;
+            configMatches = false;
+            continue;
         }
         const std::string& kernelValue = it->second;
         if (!matrixConfig.second.matchValue(kernelValue)) {
-            if (error != nullptr) {
-                *error = "For config " + key + ", value = " + kernelValue + " but required " +
-                         to_string(matrixConfig.second);
-            }
-            return false;
+            ss << "\n    For config " << key << ", value = " << kernelValue << " but required "
+               << to_string(matrixConfig.second);
+            configMatches = false;
+            continue;
         }
     }
-    return true;
+    if (!configMatches && error != nullptr) {
+        *error = ss.str();
+    }
+    return configMatches;
 }
 
 bool KernelInfo::matchKernelVersion(const KernelVersion& minLts) const {
@@ -215,7 +219,7 @@ std::vector<const MatrixKernel*> KernelInfo::getMatchedKernelVersionAndConfigs(
         }
         foundMatchedKernelVersion = true;
         // ignore this fragment if not all conditions are met.
-        if (!matchKernelConfigs(matrixKernel->conditions(), error)) {
+        if (!matchKernelConfigs(matrixKernel->conditions(), nullptr)) {
             continue;
         }
         if (!matchKernelConfigs(matrixKernel->configs(), error)) {
