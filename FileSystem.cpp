@@ -20,6 +20,7 @@
 #include <dirent.h>
 
 #include <android-base/file.h>
+#include <android-base/strings.h>
 
 namespace android {
 namespace vintf {
@@ -114,6 +115,50 @@ status_t FileSystemUnderPath::modifiedTime(const std::string& path, int64_t* mti
 
 const std::string& FileSystemUnderPath::getRootDir() const {
     return mRootDir;
+}
+
+PathReplacingFileSystem::PathReplacingFileSystem(std::string path_to_replace,
+                                                 std::string path_replacement,
+                                                 std::unique_ptr<FileSystem> impl)
+    : path_to_replace_{std::move(path_to_replace)},
+      path_replacement_{std::move(path_replacement)},
+      impl_{std::move(impl)} {
+    // Enforce a trailing slash on the path-to-be-replaced, prevents
+    // the problem (for example) of /foo matching and changing /fooxyz
+    if (!android::base::EndsWith(path_to_replace_, '/')) {
+        path_to_replace_ += "/";
+    }
+    // Enforce a trailing slash on the replacement path.  This ensures
+    // we are replacing a directory with a directory.
+    if (!android::base::EndsWith(path_replacement_, '/')) {
+        path_replacement_ += "/";
+    }
+}
+
+status_t PathReplacingFileSystem::fetch(const std::string& path, std::string* fetched,
+                                        std::string* error) const {
+    return impl_->fetch(path_replace(path), fetched, error);
+}
+
+status_t PathReplacingFileSystem::listFiles(const std::string& path, std::vector<std::string>* out,
+                                            std::string* error) const {
+    return impl_->listFiles(path_replace(path), out, error);
+}
+
+status_t PathReplacingFileSystem::modifiedTime(const std::string& path, int64_t* mtime,
+                                               std::string* error) const {
+    return impl_->modifiedTime(path_replace(path), mtime, error);
+}
+
+std::string PathReplacingFileSystem::path_replace(std::string_view path) const {
+    std::string retstr;
+    if (android::base::ConsumePrefix(&path, path_to_replace_)) {
+        retstr.reserve(path_replacement_.size() + path.size());
+        retstr.append(path_replacement_);
+        retstr.append(path);
+        return retstr;
+    }
+    return std::string{path};
 }
 
 }  // namespace details
