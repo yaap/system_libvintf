@@ -39,6 +39,11 @@ std::vector<std::string> getAidlHalInstanceNames(const std::string& descriptor) 
         ret.push_back(descriptor + "/" + instance);
     }
 
+    if (ret.size() == 0) {
+        std::cerr << "WARNING: There are no instances of AIDL service '" << descriptor
+                  << "' declared on this device." << std::endl;
+    }
+
     return ret;
 }
 
