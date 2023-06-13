@@ -21,8 +21,10 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <vector>
 
 #include <aidl/metadata.h>
+#include <android-base/file.h>
 #include <android-base/logging.h>
 #include <android-base/result.h>
 #include <android-base/strings.h>
@@ -75,10 +77,46 @@ static std::unique_ptr<ApexInterface> createDefaultApex() {
     return std::make_unique<details::Apex>();
 }
 
+// Check whether the current executable is allowed to use libvintf.
+// Allowed binaries:
+// - host binaries
+// - tests
+// - {hw,}servicemanager
+static bool isAllowedToUseLibvintf() {
+    if constexpr (!kIsTarget) {
+        return true;
+    }
+
+    auto execPath = android::base::GetExecutablePath();
+    if (android::base::StartsWith(execPath, "/data/")) {
+        return true;
+    }
+
+    std::vector<std::string> allowedBinaries{
+        "/system/bin/servicemanager",
+        "/system/bin/hwservicemanager",
+        // Java: boot time VINTF check
+        "/system/bin/app_process32",
+        "/system/bin/app_process64",
+        // These aren't daemons so the memory impact is less concerning.
+        "/system/bin/lshal",
+    };
+
+    return std::find(allowedBinaries.begin(), allowedBinaries.end(), execPath) !=
+           allowedBinaries.end();
+}
+
 std::shared_ptr<VintfObject> VintfObject::GetInstance() {
     static details::LockedSharedPtr<VintfObject> sInstance{};
     std::unique_lock<std::mutex> lock(sInstance.mutex);
     if (sInstance.object == nullptr) {
+        if (!isAllowedToUseLibvintf()) {
+            LOG(ERROR) << "libvintf-usage-violation: Executable "
+                       << android::base::GetExecutablePath()
+                       << " should not use libvintf. It should query VINTF "
+                       << "metadata via servicemanager";
+        }
+
         sInstance.object = std::shared_ptr<VintfObject>(VintfObject::Builder().build().release());
     }
     return sInstance.object;
