@@ -1297,6 +1297,11 @@ android::base::Result<void> VintfObject::checkMissingHalsInMatrices(
             "The following HIDL packages are not found in any compatibility matrix fragments:\t\n" +
             android::base::Join(allHidlPackagesAndVersions, "\t\n"));
     }
+    if (!allAidlVintfPackages.empty()) {
+        errors.push_back(
+            "The following AIDL packages are not found in any compatibility matrix fragments:\t\n" +
+            android::base::Join(allAidlVintfPackages, "\t\n"));
+    }
 
     if (!errors.empty()) {
         return android::base::Error() << android::base::Join(errors, "\n");
