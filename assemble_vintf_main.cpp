@@ -23,6 +23,7 @@
 #include "utils.h"
 
 void help() {
+    // clang-format off
     std::cerr << "assemble_vintf: Checks if a given manifest / matrix file is valid and \n"
                  "    fill in build-time flags into the given file.\n"
                  "assemble_vintf -h\n"
@@ -68,7 +69,12 @@ void help() {
                  "               Cannot be used with -l.\n"
                  "    --no-kernel-requirements\n"
                  "               Output has no <config> entries in <kernel>, and kernel minor\n"
-                 "               version is set to zero. (For example, 3.18.0).\n";
+                 "               version is set to zero. (For example, 3.18.0).\n"
+                 "    --core-hals={only,disallow,default}\n"
+                 "               If strategy is `only`, check if each HAL in the compatibility\n"
+                 "               matrix is `android.*`. If strategy is `disallow`, check if none\n"
+                 "               of the HALs in the compatibility matrix is `android.*`.\n";
+    // clang-format on
 }
 
 int main(int argc, char** argv) {
@@ -77,6 +83,7 @@ int main(int argc, char** argv) {
                                       {"hals-only", no_argument, NULL, 'l'},
                                       {"no-hals", no_argument, NULL, 'n'},
                                       {"no-kernel-requirements", no_argument, NULL, 'K'},
+                                      {"core-hals", required_argument, NULL, 'H'},
                                       {0, 0, 0, 0}};
 
     std::string outFilePath;
@@ -133,6 +140,12 @@ int main(int argc, char** argv) {
 
             case 'K': {
                 if (!assembleVintf->setNoKernelRequirements()) {
+                    return 1;
+                }
+            } break;
+
+            case 'H': {
+                if (!assembleVintf->setCoreHalsStrategy(optarg)) {
                     return 1;
                 }
             } break;
