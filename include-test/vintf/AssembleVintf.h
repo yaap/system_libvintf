@@ -54,6 +54,7 @@ class AssembleVintf {
     virtual std::istream& addKernelConfigInputStream(const KernelVersion& kernelVer,
                                                      const std::string& name, Istream&& in) = 0;
     virtual void setFakeEnv(const std::string& key, const std::string& value) = 0;
+    virtual bool setCoreHalsStrategy(const std::string& allowedHal) = 0;
 
    protected:
     virtual bool hasKernelVersion(const KernelVersion&) const = 0;
