@@ -697,8 +697,15 @@ class AssembleVintfImpl : public AssembleVintf {
     }
 
     static bool isCoreHal(const std::string& halName) {
-        if (android::base::StartsWith(halName, "android.")) {
-            return true;
+        std::vector<std::string_view> allowedPrefixes{
+            "android.hardware.",
+            "android.frameworks.",
+            "android.system.",
+        };
+        for (auto allowedPrefix : allowedPrefixes) {
+            if (android::base::StartsWith(halName, allowedPrefix)) {
+                return true;
+            }
         }
         if (halName == "mapper") {
             return true;
