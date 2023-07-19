@@ -222,6 +222,22 @@ const std::string systemMatrixLevel1 =
     "            <instance>legacy</instance>\n"
     "        </interface>\n"
     "    </hal>\n"
+    "    <hal format=\"aidl\" optional=\"true\">\n"
+    "        <name>android.hardware.minor</name>\n"
+    "        <version>101</version>\n"
+    "        <interface>\n"
+    "            <name>IMinor</name>\n"
+    "            <instance>default</instance>\n"
+    "        </interface>\n"
+    "    </hal>\n"
+    "    <hal format=\"aidl\" optional=\"true\">\n"
+    "        <name>android.hardware.removed</name>\n"
+    "        <version>101</version>\n"
+    "        <interface>\n"
+    "            <name>IRemoved</name>\n"
+    "            <instance>default</instance>\n"
+    "        </interface>\n"
+    "    </hal>\n"
     "</compatibility-matrix>\n";
 
 const std::string systemMatrixLevel2 =
@@ -237,6 +253,14 @@ const std::string systemMatrixLevel2 =
     "    <hal format=\"hidl\" optional=\"true\">\n"
     "        <name>android.hardware.minor</name>\n"
     "        <version>1.1</version>\n"
+    "        <interface>\n"
+    "            <name>IMinor</name>\n"
+    "            <instance>default</instance>\n"
+    "        </interface>\n"
+    "    </hal>\n"
+    "    <hal format=\"aidl\" optional=\"true\">\n"
+    "        <name>android.hardware.minor</name>\n"
+    "        <version>102</version>\n"
     "        <interface>\n"
     "            <name>IMinor</name>\n"
     "            <instance>default</instance>\n"
@@ -518,7 +542,8 @@ class VintfObjectTestBase : public ::testing::Test {
     }
 
     // clang-format on
-    void expectVendorManifest(Level level, const std::vector<std::string>& fqInstances) {
+    void expectVendorManifest(Level level, const std::vector<std::string>& fqInstances,
+                              const std::vector<FqInstance>& aidlInstances = {}) {
         std::string xml =
             android::base::StringPrintf(R"(<manifest %s type="device" target-level="%s">)",
                                         kMetaVersionStr.c_str(), to_string(level).c_str());
@@ -537,6 +562,18 @@ class VintfObjectTestBase : public ::testing::Test {
                 toFQNameString(fqInstance->getVersion(), fqInstance->getInterface(),
                                fqInstance->getInstance())
                     .c_str());
+        }
+        for (const auto& fqInstance : aidlInstances) {
+            xml += android::base::StringPrintf(
+                R"(
+                    <hal format="aidl">
+                        <name>%s</name>
+                        <version>%zu</version>
+                        <fqname>%s</fqname>
+                    </hal>
+                )",
+                fqInstance.getPackage().c_str(), fqInstance.getMinorVersion(),
+                toFQNameString(fqInstance.getInterface(), fqInstance.getInstance()).c_str());
         }
         xml += "</manifest>";
         expectFetchRepeatedly(kVendorManifest, xml);
@@ -1366,11 +1403,24 @@ class DeprecateTest : public VintfObjectTestBase {
     }
 };
 
+// clang-format on
+
+FqInstance aidlFqInstance(const std::string& package, size_t version, const std::string& interface,
+                          const std::string& instance) {
+    auto ret = FqInstance::from(package, kFakeAidlMajorVersion, version, interface, instance);
+    EXPECT_TRUE(ret.has_value());
+    return ret.value_or(FqInstance());
+}
+
+// clang-format off
+
 TEST_F(DeprecateTest, CheckNoDeprecate) {
     expectVendorManifest(Level{2}, {
         "android.hardware.minor@1.1::IMinor/default",
         "android.hardware.major@2.0::IMajor/default",
         "product.minor@1.1::IMinor/default",
+    }, {
+        aidlFqInstance("android.hardware.minor", 102, "IMinor", "default"),
     });
     std::string error;
     EXPECT_EQ(NO_DEPRECATED_HALS, vintfObject->checkDeprecation({}, &error)) << error;
@@ -1385,6 +1435,15 @@ TEST_F(DeprecateTest, CheckRemovedSystem) {
     std::string error;
     EXPECT_EQ(DEPRECATED, vintfObject->checkDeprecation({}, &error))
         << "removed@1.0 should be deprecated. " << error;
+}
+
+TEST_F(DeprecateTest, CheckRemovedSystemAidl) {
+    expectVendorManifest(Level{2}, {}, {
+        aidlFqInstance("android.hardware.removed", 101, "IRemoved", "default"),
+    });
+    std::string error;
+    EXPECT_EQ(DEPRECATED, vintfObject->checkDeprecation({}, &error))
+        << "removed@101 should be deprecated. " << error;
 }
 
 TEST_F(DeprecateTest, CheckRemovedProduct) {
@@ -1405,6 +1464,15 @@ TEST_F(DeprecateTest, CheckMinorSystem) {
     std::string error;
     EXPECT_EQ(DEPRECATED, vintfObject->checkDeprecation({}, &error))
         << "minor@1.0 should be deprecated. " << error;
+}
+
+TEST_F(DeprecateTest, CheckMinorSystemAidl) {
+    expectVendorManifest(Level{2}, {}, {
+        aidlFqInstance("android.hardware.minor", 101, "IMinor", "default"),
+    });
+    std::string error;
+    EXPECT_EQ(DEPRECATED, vintfObject->checkDeprecation({}, &error))
+        << "minor@101 should be deprecated. " << error;
 }
 
 TEST_F(DeprecateTest, CheckMinorProduct) {
