@@ -1308,8 +1308,7 @@ struct CheckedFqInstance : FqInstance {
 
 static VintfObject::ListInstances getInstanceListFunc(
     const std::vector<CheckedFqInstance>& instances) {
-    return [instances](const std::string& package, Version version, const std::string& interface,
-                       const auto& /* instanceHint */) {
+    return [instances](const std::string& package, Version version, const std::string& interface) {
         std::vector<std::pair<std::string, Version>> ret;
         for (auto&& existing : instances) {
             if (existing.getPackage() == package && existing.getVersion().minorAtLeast(version) &&
