@@ -821,8 +821,9 @@ bool VintfObject::IsInstanceDeprecated(const MatrixInstance& oldMatrixInstance,
             return true;  // continue
         }
 
-        auto inheritance = GetListedInstanceInheritance(
-            package, servedVersion, interface, servedInstance, deviceManifest, childrenMap);
+        auto inheritance =
+            GetListedInstanceInheritance(oldMatrixInstance.format(), package, servedVersion,
+                                         interface, servedInstance, deviceManifest, childrenMap);
         if (!inheritance.has_value()) {
             accumulatedErrors.push_back(inheritance.error().message());
             return true;  // continue
@@ -845,8 +846,8 @@ bool VintfObject::IsInstanceDeprecated(const MatrixInstance& oldMatrixInstance,
         accumulatedErrors.insert(accumulatedErrors.end(), errors.begin(), errors.end());
         return true;  // continue to next instance
     };
-    (void)deviceManifest->forEachInstanceOfInterface(HalFormat::HIDL, package, version, interface,
-                                                     addErrorForInstance);
+    (void)deviceManifest->forEachInstanceOfInterface(oldMatrixInstance.format(), package, version,
+                                                     interface, addErrorForInstance);
 
     if (accumulatedErrors.empty()) {
         return false;
@@ -857,11 +858,11 @@ bool VintfObject::IsInstanceDeprecated(const MatrixInstance& oldMatrixInstance,
 
 // Check if fqInstance is listed in |deviceManifest|.
 bool VintfObject::IsInstanceListed(const std::shared_ptr<const HalManifest>& deviceManifest,
-                                   const FqInstance& fqInstance) {
+                                   HalFormat format, const FqInstance& fqInstance) {
     bool found = false;
     (void)deviceManifest->forEachInstanceOfInterface(
-        HalFormat::HIDL, fqInstance.getPackage(), fqInstance.getVersion(),
-        fqInstance.getInterface(), [&](const ManifestInstance& manifestInstance) {
+        format, fqInstance.getPackage(), fqInstance.getVersion(), fqInstance.getInterface(),
+        [&](const ManifestInstance& manifestInstance) {
             if (manifestInstance.instance() == fqInstance.getInstance()) {
                 found = true;
             }
@@ -874,16 +875,16 @@ bool VintfObject::IsInstanceListed(const std::shared_ptr<const HalManifest>& dev
 // - is listed in |deviceManifest|; AND
 // - is, or inherits from, package@version::interface/instance (as specified by |childrenMap|)
 android::base::Result<std::vector<FqInstance>> VintfObject::GetListedInstanceInheritance(
-    const std::string& package, const Version& version, const std::string& interface,
-    const std::string& instance, const std::shared_ptr<const HalManifest>& deviceManifest,
-    const ChildrenMap& childrenMap) {
+    HalFormat format, const std::string& package, const Version& version,
+    const std::string& interface, const std::string& instance,
+    const std::shared_ptr<const HalManifest>& deviceManifest, const ChildrenMap& childrenMap) {
     FqInstance fqInstance;
     if (!fqInstance.setTo(package, version.majorVer, version.minorVer, interface, instance)) {
         return android::base::Error() << toFQNameString(package, version, interface, instance)
                                       << " is not a valid FqInstance";
     }
 
-    if (!IsInstanceListed(deviceManifest, fqInstance)) {
+    if (!IsInstanceListed(deviceManifest, format, fqInstance)) {
         return {};
     }
 
@@ -907,7 +908,7 @@ android::base::Result<std::vector<FqInstance>> VintfObject::GetListedInstanceInh
                                           << fqInstance.getInstance() << " as FqInstance";
             continue;
         }
-        if (!IsInstanceListed(deviceManifest, childFqInstance)) {
+        if (!IsInstanceListed(deviceManifest, format, childFqInstance)) {
             continue;
         }
         ret.push_back(childFqInstance);
@@ -947,7 +948,7 @@ android::base::Result<void> VintfObject::IsFqInstanceDeprecated(
     bool targetVersionServed = false;
 
     (void)deviceManifest->forEachInstanceOfInterface(
-        HalFormat::HIDL, fqInstance.getPackage(), targetMatrixMinVer, fqInstance.getInterface(),
+        format, fqInstance.getPackage(), targetMatrixMinVer, fqInstance.getInterface(),
         [&](const ManifestInstance& manifestInstance) {
             if (manifestInstance.instance() == fqInstance.getInstance()) {
                 targetVersionServed = true;
@@ -1018,6 +1019,7 @@ int32_t VintfObject::checkDeprecation(const std::vector<HidlInterfaceMetadata>& 
             childrenMap.emplace(parent, child.name);
         }
     }
+    // AIDL does not have inheritance.
 
     // Find a list of possibly deprecated HALs by comparing |deviceManifest| with older matrices.
     // Matrices with unspecified level are considered "current".
