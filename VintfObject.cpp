@@ -34,6 +34,7 @@
 #include "CompatibilityMatrix.h"
 #include "VintfObjectUtils.h"
 #include "constants-private.h"
+#include "include/vintf/FqInstance.h"
 #include "parse_string.h"
 #include "parse_xml.h"
 #include "utils.h"
@@ -785,11 +786,11 @@ std::vector<std::string> dumpFileList(const std::string& sku) {
 
 bool VintfObject::IsHalDeprecated(const MatrixHal& oldMatrixHal,
                                   const CompatibilityMatrix& targetMatrix,
-                                  const ListInstances& listInstances,
+                                  const std::shared_ptr<const HalManifest>& deviceManifest,
                                   const ChildrenMap& childrenMap, std::string* appendedError) {
     bool isDeprecated = false;
     oldMatrixHal.forEachInstance([&](const MatrixInstance& oldMatrixInstance) {
-        if (IsInstanceDeprecated(oldMatrixInstance, targetMatrix, listInstances, childrenMap,
+        if (IsInstanceDeprecated(oldMatrixInstance, targetMatrix, deviceManifest, childrenMap,
                                  appendedError)) {
             isDeprecated = true;
         }
@@ -799,53 +800,53 @@ bool VintfObject::IsHalDeprecated(const MatrixHal& oldMatrixHal,
 }
 
 // Let oldMatrixInstance = package@x.y-w::interface/instancePattern.
-// If any "@servedVersion::interface/servedInstance" in listInstances(package@x.y::interface)
+// If any "@servedVersion::interface/servedInstance" in deviceManifest(package@x.y::interface)
 // matches instancePattern, return true iff for all child interfaces (from
 // GetListedInstanceInheritance), IsFqInstanceDeprecated returns false.
 bool VintfObject::IsInstanceDeprecated(const MatrixInstance& oldMatrixInstance,
                                        const CompatibilityMatrix& targetMatrix,
-                                       const ListInstances& listInstances,
+                                       const std::shared_ptr<const HalManifest>& deviceManifest,
                                        const ChildrenMap& childrenMap, std::string* appendedError) {
     const std::string& package = oldMatrixInstance.package();
     const Version& version = oldMatrixInstance.versionRange().minVer();
     const std::string& interface = oldMatrixInstance.interface();
 
     std::vector<std::string> accumulatedErrors;
-    auto list = listInstances(package, version, interface);
 
-    for (const auto& pair : list) {
-        const std::string& servedInstance = pair.first;
-        Version servedVersion = pair.second;
-        std::string servedFqInstanceString =
-            toFQNameString(package, servedVersion, interface, servedInstance);
+    auto addErrorForInstance = [&](const ManifestInstance& manifestInstance) {
+        const std::string& servedInstance = manifestInstance.instance();
+        Version servedVersion = manifestInstance.version();
         if (!oldMatrixInstance.matchInstance(servedInstance)) {
             // ignore unrelated instance
-            continue;
+            return true;  // continue
         }
 
-        auto inheritance = GetListedInstanceInheritance(package, servedVersion, interface,
-                                                        servedInstance, listInstances, childrenMap);
+        auto inheritance = GetListedInstanceInheritance(
+            package, servedVersion, interface, servedInstance, deviceManifest, childrenMap);
         if (!inheritance.has_value()) {
             accumulatedErrors.push_back(inheritance.error().message());
-            continue;
+            return true;  // continue
         }
 
         std::vector<std::string> errors;
         for (const auto& fqInstance : *inheritance) {
             auto result = IsFqInstanceDeprecated(targetMatrix, oldMatrixInstance.format(),
-                                                 fqInstance, listInstances);
+                                                 fqInstance, deviceManifest);
             if (result.ok()) {
                 errors.clear();
-                break;
+                return false;  // break
             }
             errors.push_back(result.error().message());
         }
 
         if (errors.empty()) {
-            continue;
+            return true;  // continue
         }
         accumulatedErrors.insert(accumulatedErrors.end(), errors.begin(), errors.end());
-    }
+        return true;  // continue to next instance
+    };
+    (void)deviceManifest->forEachInstanceOfInterface(HalFormat::HIDL, package, version, interface,
+                                                     addErrorForInstance);
 
     if (accumulatedErrors.empty()) {
         return false;
@@ -854,21 +855,27 @@ bool VintfObject::IsInstanceDeprecated(const MatrixInstance& oldMatrixInstance,
     return true;
 }
 
-// Check if fqInstance is listed in |listInstances|.
-bool VintfObject::IsInstanceListed(const ListInstances& listInstances,
+// Check if fqInstance is listed in |deviceManifest|.
+bool VintfObject::IsInstanceListed(const std::shared_ptr<const HalManifest>& deviceManifest,
                                    const FqInstance& fqInstance) {
-    auto list =
-        listInstances(fqInstance.getPackage(), fqInstance.getVersion(), fqInstance.getInterface());
-    return std::any_of(list.begin(), list.end(),
-                       [&](const auto& pair) { return pair.first == fqInstance.getInstance(); });
+    bool found = false;
+    (void)deviceManifest->forEachInstanceOfInterface(
+        HalFormat::HIDL, fqInstance.getPackage(), fqInstance.getVersion(),
+        fqInstance.getInterface(), [&](const ManifestInstance& manifestInstance) {
+            if (manifestInstance.instance() == fqInstance.getInstance()) {
+                found = true;
+            }
+            return !found;  // continue to next instance if not found
+        });
+    return found;
 }
 
 // Return a list of FqInstance, where each element:
-// - is listed in |listInstances|; AND
+// - is listed in |deviceManifest|; AND
 // - is, or inherits from, package@version::interface/instance (as specified by |childrenMap|)
 android::base::Result<std::vector<FqInstance>> VintfObject::GetListedInstanceInheritance(
     const std::string& package, const Version& version, const std::string& interface,
-    const std::string& instance, const ListInstances& listInstances,
+    const std::string& instance, const std::shared_ptr<const HalManifest>& deviceManifest,
     const ChildrenMap& childrenMap) {
     FqInstance fqInstance;
     if (!fqInstance.setTo(package, version.majorVer, version.minorVer, interface, instance)) {
@@ -876,7 +883,7 @@ android::base::Result<std::vector<FqInstance>> VintfObject::GetListedInstanceInh
                                       << " is not a valid FqInstance";
     }
 
-    if (!IsInstanceListed(listInstances, fqInstance)) {
+    if (!IsInstanceListed(deviceManifest, fqInstance)) {
         return {};
     }
 
@@ -900,7 +907,7 @@ android::base::Result<std::vector<FqInstance>> VintfObject::GetListedInstanceInh
                                           << fqInstance.getInstance() << " as FqInstance";
             continue;
         }
-        if (!IsInstanceListed(listInstances, childFqInstance)) {
+        if (!IsInstanceListed(deviceManifest, childFqInstance)) {
             continue;
         }
         ret.push_back(childFqInstance);
@@ -912,10 +919,10 @@ android::base::Result<std::vector<FqInstance>> VintfObject::GetListedInstanceInh
 // targetMatrix.matchInstance(fqInstance), but provides richer error message. In details:
 // 1. package@x.?::interface/servedInstance is not in targetMatrix; OR
 // 2. package@x.z::interface/servedInstance is in targetMatrix but
-//    servedInstance is not in listInstances(package@x.z::interface)
+//    servedInstance is not in deviceManifest(package@x.z::interface)
 android::base::Result<void> VintfObject::IsFqInstanceDeprecated(
     const CompatibilityMatrix& targetMatrix, HalFormat format, const FqInstance& fqInstance,
-    const ListInstances& listInstances) {
+    const std::shared_ptr<const HalManifest>& deviceManifest) {
     // Find minimum package@x.? in target matrix, and check if instance is in target matrix.
     bool foundInstance = false;
     Version targetMatrixMinVer{SIZE_MAX, SIZE_MAX};
@@ -938,13 +945,16 @@ android::base::Result<void> VintfObject::IsFqInstanceDeprecated(
 
     // Assuming that targetMatrix requires @x.u-v, require that at least @x.u is served.
     bool targetVersionServed = false;
-    for (const auto& newPair :
-         listInstances(fqInstance.getPackage(), targetMatrixMinVer, fqInstance.getInterface())) {
-        if (newPair.first == fqInstance.getInstance()) {
-            targetVersionServed = true;
-            break;
-        }
-    }
+
+    (void)deviceManifest->forEachInstanceOfInterface(
+        HalFormat::HIDL, fqInstance.getPackage(), targetMatrixMinVer, fqInstance.getInterface(),
+        [&](const ManifestInstance& manifestInstance) {
+            if (manifestInstance.instance() == fqInstance.getInstance()) {
+                targetVersionServed = true;
+                return false;  // break
+            }
+            return true;  // continue
+        });
 
     if (!targetVersionServed) {
         return android::base::Error()
@@ -953,8 +963,7 @@ android::base::Result<void> VintfObject::IsFqInstanceDeprecated(
     return {};
 }
 
-int32_t VintfObject::checkDeprecation(const ListInstances& listInstances,
-                                      const std::vector<HidlInterfaceMetadata>& hidlMetadata,
+int32_t VintfObject::checkDeprecation(const std::vector<HidlInterfaceMetadata>& hidlMetadata,
                                       std::string* error) {
     std::vector<CompatibilityMatrix> matrixFragments;
     auto matrixFragmentsStatus = getAllFrameworkMatrixLevels(&matrixFragments, error);
@@ -1010,7 +1019,7 @@ int32_t VintfObject::checkDeprecation(const ListInstances& listInstances,
         }
     }
 
-    // Find a list of possibly deprecated HALs by comparing |listInstances| with older matrices.
+    // Find a list of possibly deprecated HALs by comparing |deviceManifest| with older matrices.
     // Matrices with unspecified level are considered "current".
     bool isDeprecated = false;
     for (auto it = matrixFragments.begin(); it < targetMatricesPartition; ++it) {
@@ -1018,32 +1027,13 @@ int32_t VintfObject::checkDeprecation(const ListInstances& listInstances,
         if (namedMatrix.level() == Level::UNSPECIFIED) continue;
         if (namedMatrix.level() > deviceLevel) continue;
         for (const MatrixHal& hal : namedMatrix.getHals()) {
-            if (IsHalDeprecated(hal, *targetMatrix, listInstances, childrenMap, error)) {
+            if (IsHalDeprecated(hal, *targetMatrix, deviceManifest, childrenMap, error)) {
                 isDeprecated = true;
             }
         }
     }
 
     return isDeprecated ? DEPRECATED : NO_DEPRECATED_HALS;
-}
-
-int32_t VintfObject::checkDeprecation(const std::vector<HidlInterfaceMetadata>& hidlMetadata,
-                                      std::string* error) {
-    using namespace std::placeholders;
-    auto deviceManifest = getDeviceHalManifest();
-    ListInstances inManifest = [&deviceManifest](const std::string& package, Version version,
-                                                 const std::string& interface) {
-        std::vector<std::pair<std::string, Version>> ret;
-        deviceManifest->forEachInstanceOfInterface(
-            HalFormat::HIDL, package, version, interface,
-            [&ret](const ManifestInstance& manifestInstance) {
-                ret.push_back(
-                    std::make_pair(manifestInstance.instance(), manifestInstance.version()));
-                return true;
-            });
-        return ret;
-    };
-    return checkDeprecation(inManifest, hidlMetadata, error);
 }
 
 Level VintfObject::getKernelLevel(std::string* error) {
