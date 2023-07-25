@@ -180,16 +180,10 @@ class VintfObject {
     /**
      * A std::function that abstracts a list of "provided" instance names. Given package, version
      * and interface, the function returns a list of instance names that matches.
-     * This function can represent a manifest, an IServiceManager, etc.
-     * If the source is passthrough service manager, a list of instance names cannot be provided.
-     * Instead, the function should call getService on each of the "hintInstances", and
-     * return those instances for which getService does not return a nullptr. This means that for
-     * passthrough HALs, the deprecation on <regex-instance>s cannot be enforced; only <instance>s
-     * can be enforced.
+     * This function should represent a manifest.
      */
     using ListInstances = std::function<std::vector<std::pair<std::string, Version>>(
-        const std::string& package, Version version, const std::string& interface,
-        const std::vector<std::string>& hintInstances)>;
+        const std::string& package, Version version, const std::string& interface)>;
     /**
      * Check deprecation on framework matrices with a provided predicate.
      *
