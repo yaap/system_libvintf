@@ -810,13 +810,8 @@ bool VintfObject::IsInstanceDeprecated(const MatrixInstance& oldMatrixInstance,
     const Version& version = oldMatrixInstance.versionRange().minVer();
     const std::string& interface = oldMatrixInstance.interface();
 
-    std::vector<std::string> instanceHint;
-    if (!oldMatrixInstance.isRegex()) {
-        instanceHint.push_back(oldMatrixInstance.exactInstance());
-    }
-
     std::vector<std::string> accumulatedErrors;
-    auto list = listInstances(package, version, interface, instanceHint);
+    auto list = listInstances(package, version, interface);
 
     for (const auto& pair : list) {
         const std::string& servedInstance = pair.first;
@@ -863,8 +858,7 @@ bool VintfObject::IsInstanceDeprecated(const MatrixInstance& oldMatrixInstance,
 bool VintfObject::IsInstanceListed(const ListInstances& listInstances,
                                    const FqInstance& fqInstance) {
     auto list =
-        listInstances(fqInstance.getPackage(), fqInstance.getVersion(), fqInstance.getInterface(),
-                      {fqInstance.getInstance()} /* instanceHint*/);
+        listInstances(fqInstance.getPackage(), fqInstance.getVersion(), fqInstance.getInterface());
     return std::any_of(list.begin(), list.end(),
                        [&](const auto& pair) { return pair.first == fqInstance.getInstance(); });
 }
@@ -945,8 +939,7 @@ android::base::Result<void> VintfObject::IsFqInstanceDeprecated(
     // Assuming that targetMatrix requires @x.u-v, require that at least @x.u is served.
     bool targetVersionServed = false;
     for (const auto& newPair :
-         listInstances(fqInstance.getPackage(), targetMatrixMinVer, fqInstance.getInterface(),
-                       {fqInstance.getInstance()} /* instanceHint */)) {
+         listInstances(fqInstance.getPackage(), targetMatrixMinVer, fqInstance.getInterface())) {
         if (newPair.first == fqInstance.getInstance()) {
             targetVersionServed = true;
             break;
@@ -1038,19 +1031,18 @@ int32_t VintfObject::checkDeprecation(const std::vector<HidlInterfaceMetadata>& 
                                       std::string* error) {
     using namespace std::placeholders;
     auto deviceManifest = getDeviceHalManifest();
-    ListInstances inManifest =
-        [&deviceManifest](const std::string& package, Version version, const std::string& interface,
-                          const std::vector<std::string>& /* hintInstances */) {
-            std::vector<std::pair<std::string, Version>> ret;
-            deviceManifest->forEachInstanceOfInterface(
-                HalFormat::HIDL, package, version, interface,
-                [&ret](const ManifestInstance& manifestInstance) {
-                    ret.push_back(
-                        std::make_pair(manifestInstance.instance(), manifestInstance.version()));
-                    return true;
-                });
-            return ret;
-        };
+    ListInstances inManifest = [&deviceManifest](const std::string& package, Version version,
+                                                 const std::string& interface) {
+        std::vector<std::pair<std::string, Version>> ret;
+        deviceManifest->forEachInstanceOfInterface(
+            HalFormat::HIDL, package, version, interface,
+            [&ret](const ManifestInstance& manifestInstance) {
+                ret.push_back(
+                    std::make_pair(manifestInstance.instance(), manifestInstance.version()));
+                return true;
+            });
+        return ret;
+    };
     return checkDeprecation(inManifest, hidlMetadata, error);
 }
 
