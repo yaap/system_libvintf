@@ -597,8 +597,8 @@ class VintfObjectTestBase : public ::testing::Test {
         // Map the apex with manifest to the files below
         const std::string& active_apex = apex_dirs.at(0);
 
-        EXPECT_CALL(apex(), DeviceVintfDirs(_, _, _))
-            .WillOnce(Invoke([apex_dirs](auto*, auto* out, auto*){
+        EXPECT_CALL(apex(), DeviceVintfDirs(_, _, _, _))
+            .WillOnce(Invoke([apex_dirs](auto*, auto*, auto* out, auto*){
                 *out = apex_dirs;
                 return ::android::OK;
             }))
@@ -1020,18 +1020,18 @@ class DeviceManifestTest : public VintfObjectTestBase {
       // Map the apex with manifest to the files below
       const std::string& active_apex = apex_dirs.at(0);
 
-      EXPECT_CALL(apex(), DeviceVintfDirs(_, _, _))
-          .WillOnce(Invoke([](auto*, auto* out, auto*){
+      EXPECT_CALL(apex(), DeviceVintfDirs(_, _, _, _))
+          .WillOnce(Invoke([](auto*, auto*, auto* out, auto*){
             *out = {};
             return ::android::OK;
           })) // Initialization
-          .WillOnce(Invoke([apex_dirs](auto*, auto* out, auto*){
+          .WillOnce(Invoke([apex_dirs](auto*, auto*, auto* out, auto*){
             *out = apex_dirs;
             return ::android::OK;
           })) // after apex loaded
           ;
 
-      EXPECT_CALL(apex(), HasUpdate(_)) // Not called during init
+      EXPECT_CALL(apex(), HasUpdate(_, _)) // Not called during init
           .WillOnce(Return(true)) // Apex loaded
           .WillOnce(Return(false)) // no updated to apex data
           ;
