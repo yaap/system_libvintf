@@ -36,6 +36,7 @@
 #include "parse_xml_for_test.h"
 #include "parse_xml_internal.h"
 #include "test_constants.h"
+#include "utils.h"
 
 using android::base::StringPrintf;
 using ::testing::Combine;
@@ -1471,10 +1472,11 @@ TEST_F(LibVintfTest, FullCompat) {
 
 TEST_F(LibVintfTest, ApexInterfaceShouldBeOkayWithoutApexInfoList) {
     details::FileSystemNoOp fs;
+    details::PropertyFetcherNoOp pf;
     details::Apex apex;
-    ASSERT_FALSE(apex.HasUpdate(&fs));
+    ASSERT_FALSE(apex.HasUpdate(&fs, &pf));
     std::vector<std::string> dirs;
-    ASSERT_EQ(OK, apex.DeviceVintfDirs(&fs, &dirs, nullptr));
+    ASSERT_EQ(OK, apex.DeviceVintfDirs(&fs, &pf, &dirs, nullptr));
 }
 
 struct NativeHalCompatTestParam {

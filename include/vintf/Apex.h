@@ -17,6 +17,7 @@
 #pragma once
 
 #include "FileSystem.h"
+#include "PropertyFetcher.h"
 
 #include <optional>
 #include <string>
@@ -30,10 +31,10 @@ class ApexInterface {
    public:
     virtual ~ApexInterface() = default;
     // Check if there is an update for the given type of APEX files in the system
-    virtual bool HasUpdate(FileSystem* fileSystem) const = 0;
+    virtual bool HasUpdate(FileSystem* fileSystem, PropertyFetcher* propertyFetcher) const = 0;
     // Get device VINTF directories
-    virtual status_t DeviceVintfDirs(FileSystem* fileSystem, std::vector<std::string>* out,
-                                     std::string* error) = 0;
+    virtual status_t DeviceVintfDirs(FileSystem* fileSystem, PropertyFetcher* propertyFetcher,
+                                     std::vector<std::string>* out, std::string* error) = 0;
 };
 
 namespace details {
@@ -42,9 +43,9 @@ namespace details {
 class Apex : public ApexInterface {
    public:
     Apex() = default;
-    bool HasUpdate(FileSystem* fileSystem) const override;
-    status_t DeviceVintfDirs(FileSystem* fileSystem, std::vector<std::string>* out,
-                             std::string* error) override;
+    bool HasUpdate(FileSystem* fileSystem, PropertyFetcher* propertyFetcher) const override;
+    status_t DeviceVintfDirs(FileSystem* fileSystem, PropertyFetcher* propertyFetcher,
+                             std::vector<std::string>* out, std::string* error) override;
 
    private:
     std::optional<int64_t> mtime_;

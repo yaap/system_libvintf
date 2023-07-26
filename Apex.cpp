@@ -28,11 +28,15 @@ namespace android {
 namespace vintf {
 namespace details {
 
-status_t Apex::DeviceVintfDirs(FileSystem* fileSystem, std::vector<std::string>* dirs,
-                               std::string* error) {
-    std::vector<std::string> vendor;
-    std::vector<std::string> odm;
+static bool isApexReady(PropertyFetcher* propertyFetcher) {
+    return propertyFetcher->getBoolProperty("apex.all.ready", false);
+}
 
+status_t Apex::DeviceVintfDirs(FileSystem* fileSystem, PropertyFetcher* propertyFetcher,
+                               std::vector<std::string>* dirs, std::string* error) {
+    if (!isApexReady(propertyFetcher)) {
+        return OK;
+    }
     // Update cached mtime_
     int64_t mtime;
     auto status = fileSystem->modifiedTime(kApexInfoFile, &mtime, error);
@@ -96,7 +100,11 @@ status_t Apex::DeviceVintfDirs(FileSystem* fileSystem, std::vector<std::string>*
 }
 
 // Returns true when /apex/apex-info-list.xml is updated
-bool Apex::HasUpdate(FileSystem* fileSystem) const {
+bool Apex::HasUpdate(FileSystem* fileSystem, PropertyFetcher* propertyFetcher) const {
+    if (!isApexReady(propertyFetcher)) {
+        return false;
+    }
+
     int64_t mtime{};
     std::string error;
     status_t status = fileSystem->modifiedTime(kApexInfoFile, &mtime, &error);
