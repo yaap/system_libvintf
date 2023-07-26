@@ -132,7 +132,7 @@ std::shared_ptr<const HalManifest> VintfObject::getDeviceHalManifest() {
     {
         std::lock_guard<std::mutex> lock(mDeviceManifest.mutex);
         if (mDeviceManifest.fetchedOnce) {
-            if (isApexReady() && getApex()->HasUpdate(getFileSystem().get())) {
+            if (getApex()->HasUpdate(getFileSystem().get(), getPropertyFetcher().get())) {
                 LOG(INFO) << __func__ << ": Reloading VINTF information.";
                 mDeviceManifest.object = nullptr;
                 mDeviceManifest.fetchedOnce = false;
@@ -299,18 +299,19 @@ status_t VintfObject::fetchDeviceHalManifest(HalManifest* out, std::string* erro
 // Fetch fragments from apexes originated from /vendor.
 // For now, we don't have /odm apexes.
 status_t VintfObject::fetchDeviceHalManifestApex(HalManifest* out, std::string* error) {
-    status_t status = OK;
-    if (!isApexReady()) {
+    std::vector<std::string> dirs;
+    status_t status =
+        getApex()->DeviceVintfDirs(getFileSystem().get(), getPropertyFetcher().get(), &dirs, error);
+    if (status != OK) {
+        return status;
+    }
+
+    if (dirs.empty()) {
         return OK;
     }
     // Create HalManifest for all APEX HALs so that the apex defined attribute can
     // be set.
     HalManifest apexManifest;
-    std::vector<std::string> dirs;
-    status = getApex()->DeviceVintfDirs(getFileSystem().get(), &dirs, error);
-    if (status != OK) {
-        return status;
-    }
     for (const auto& dir : dirs) {
         status = addDirectoryManifests(dir, &apexManifest, false, error);
         if (status != OK) {
@@ -1067,14 +1068,6 @@ const std::unique_ptr<ObjectFactory<RuntimeInfo>>& VintfObject::getRuntimeInfoFa
 
 const std::unique_ptr<ApexInterface>& VintfObject::getApex() {
     return mApex;
-}
-
-bool VintfObject::isApexReady() {
-    if constexpr (kIsTarget) {
-        return getPropertyFetcher()->getBoolProperty("apex.all.ready", false);
-    } else {
-        return true;
-    }
 }
 
 android::base::Result<bool> VintfObject::hasFrameworkCompatibilityMatrixExtensions() {
