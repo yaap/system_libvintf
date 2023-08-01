@@ -1302,6 +1302,81 @@ TEST_F(DeviceManifestTest, InvalidApexHal) {
     ASSERT_EQ(nullptr, p);
 }
 
+struct VendorApexTest : DeviceManifestTest {
+    virtual void SetUp() override {
+        // Use actual Apex implementation
+        vintfObject = VintfObject::Builder()
+                          .setFileSystem(std::make_unique<NiceMock<MockFileSystem>>())
+                          .setRuntimeInfoFactory(std::make_unique<NiceMock<MockRuntimeInfoFactory>>(
+                              std::make_shared<NiceMock<MockRuntimeInfo>>()))
+                          .setPropertyFetcher(std::make_unique<NiceMock<MockPropertyFetcher>>())
+                          .build();
+        expectVendorManifest();
+        noOdmManifest();
+
+        EXPECT_CALL(fetcher(), listFiles(_, _, _))
+            .WillRepeatedly(Invoke([](const auto&, auto*, auto*) {
+                return ::android::OK;
+            }));
+        EXPECT_CALL(fetcher(), modifiedTime(_, _, _))
+            .WillRepeatedly(Invoke([](const auto&, auto*, auto*) {
+                return ::android::OK;
+            }));
+    }
+};
+
+TEST_F(VendorApexTest, ReadBootstrapApexBeforeApexReady) {
+    // When APEXes are not ready,
+    ON_CALL(propertyFetcher(), getBoolProperty("apex.all.ready", _))
+        .WillByDefault(Return(false));
+    // Should read bootstrap APEXes from /bootstrap-apex
+    EXPECT_CALL(fetcher(), fetch(kBootstrapApexInfoFile, _))
+        .WillOnce(Invoke([](const auto&, auto& out) {
+            out = R"(<?xml version="1.0" encoding="utf-8"?>
+                <apex-info-list>
+                    <apex-info moduleName="com.vendor.foo"
+                            preinstalledModulePath="/vendor/apex/foo.apex"
+                            isActive="true" />
+                </apex-info-list>)";
+            return ::android::OK;
+        }));
+    // ... and read VINTF directory in it.
+    EXPECT_CALL(fetcher(), listFiles("/bootstrap-apex/com.vendor.foo/etc/vintf/", _, _))
+        .WillOnce(Invoke([](const auto&, auto*, auto*) {
+            return ::android::OK;
+        }));
+    auto p = get();
+    (void) p;
+}
+
+TEST_F(VendorApexTest, OkayIfBootstrapApexDirDoesntExist) {
+    // When APEXes are not ready,
+    ON_CALL(propertyFetcher(), getBoolProperty("apex.all.ready", _))
+        .WillByDefault(Return(false));
+    // Should try to read bootstrap APEXes from /bootstrap-apex
+    EXPECT_CALL(fetcher(), fetch(kBootstrapApexInfoFile, _))
+        .WillOnce(Invoke([](const auto&, auto&) {
+            return NAME_NOT_FOUND;
+        }));
+    // Doesn't fallback to normal APEX if APEXes are not ready.
+    EXPECT_CALL(fetcher(), fetch(kApexInfoFile, _)).Times(0);
+    auto p = get();
+    (void) p;
+}
+
+TEST_F(VendorApexTest, DoNotReadBootstrapApexWhenApexesAreReady) {
+    // When APEXes are ready,
+    ON_CALL(propertyFetcher(), getBoolProperty("apex.all.ready", _))
+        .WillByDefault(Return(true));
+    // Should NOT read bootstrap APEXes
+    EXPECT_CALL(fetcher(), fetch(kBootstrapApexInfoFile, _))
+        .Times(0);
+    // Instead, read /apex/apex-info-list.xml
+    EXPECT_CALL(fetcher(), fetch(kApexInfoFile, _));
+    auto p = get();
+    (void) p;
+}
+
 class OdmManifestTest : public VintfObjectTestBase,
                          public ::testing::WithParamInterface<const char*> {
    protected:
