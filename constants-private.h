@@ -68,6 +68,7 @@ constexpr const char* kOdmLegacyVintfDir = ODM_LEGACY_VINTF_DIR;
 constexpr const char* kOdmLegacyManifest = ODM_LEGACY_VINTF_DIR "manifest.xml";
 
 constexpr const char* kApexInfoFile = "/apex/apex-info-list.xml";
+constexpr const char* kBootstrapApexInfoFile = "/bootstrap-apex/apex-info-list.xml";
 
 #undef SYSTEM_VINTF_DIR
 #undef VENDOR_VINTF_DIR
