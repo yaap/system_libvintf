@@ -29,17 +29,26 @@ namespace vintf {
 namespace details {
 
 static bool isApexReady(PropertyFetcher* propertyFetcher) {
+#ifdef LIBVINTF_TARGET
     return propertyFetcher->getBoolProperty("apex.all.ready", false);
+#else
+    // When running on host, it assumes that /apex is ready.
+    // Reason for still relying on PropertyFetcher API is for host-side tests.
+    return propertyFetcher->getBoolProperty("apex.all.ready", true);
+#endif
 }
 
 status_t Apex::DeviceVintfDirs(FileSystem* fileSystem, PropertyFetcher* propertyFetcher,
                                std::vector<std::string>* dirs, std::string* error) {
+    std::string apexInfoFile = kApexInfoFile;
+    std::string apexDir = "/apex";
     if (!isApexReady(propertyFetcher)) {
-        return OK;
+        apexInfoFile = kBootstrapApexInfoFile;
+        apexDir = "/bootstrap-apex";
     }
     // Update cached mtime_
-    int64_t mtime;
-    auto status = fileSystem->modifiedTime(kApexInfoFile, &mtime, error);
+    int64_t mtime{};
+    auto status = fileSystem->modifiedTime(apexInfoFile, &mtime, error);
 
     if (status != OK) {
         switch (status) {
@@ -67,7 +76,7 @@ status_t Apex::DeviceVintfDirs(FileSystem* fileSystem, PropertyFetcher* property
 
     // Load apex-info-list
     std::string xml;
-    status = fileSystem->fetch(kApexInfoFile, &xml, error);
+    status = fileSystem->fetch(apexInfoFile, &xml, error);
     if (status == NAME_NOT_FOUND) {
         if (error) {
             error->clear();
@@ -93,7 +102,7 @@ status_t Apex::DeviceVintfDirs(FileSystem* fileSystem, PropertyFetcher* property
 
         const std::string& path = apexInfo.getPreinstalledModulePath();
         if (StartsWith(path, "/vendor/apex/") || StartsWith(path, "/system/vendor/apex/")) {
-            dirs->push_back(fmt::format("/apex/{}/" VINTF_SUB_DIR, apexInfo.getModuleName()));
+            dirs->push_back(fmt::format("{}/{}/" VINTF_SUB_DIR, apexDir, apexInfo.getModuleName()));
         }
     }
     return OK;
