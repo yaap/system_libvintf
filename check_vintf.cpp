@@ -533,9 +533,9 @@ int checkOne(const Dirmap& dirmap, const Properties& props) {
             LOG(ERROR) << "ERROR: Cannot fetch system matrix.";
             return EX_SOFTWARE;
         }
-        auto res = vintfObject->checkMissingHalsInMatrices(HidlInterfaceMetadata::all(),
-                                                           AidlInterfaceMetadata::all(),
-                                                           ShouldCheckMissingHalsInFcm);
+        auto res = vintfObject->checkMissingHalsInMatrices(
+            HidlInterfaceMetadata::all(), AidlInterfaceMetadata::all(),
+            ShouldCheckMissingHidlHalsInFcm, ShouldCheckMissingAidlHalsInFcm);
         if (!res.ok()) {
             LOG(ERROR) << "ERROR: " << res.error() << gCheckMissingHalsSuggestion;
             return EX_SOFTWARE;
