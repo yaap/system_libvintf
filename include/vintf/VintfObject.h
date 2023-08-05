@@ -232,7 +232,8 @@ class VintfObject {
     android::base::Result<void> checkMissingHalsInMatrices(
         const std::vector<HidlInterfaceMetadata>& hidlMetadata,
         const std::vector<AidlInterfaceMetadata>& aidlMetadata,
-        std::function<bool(const std::string&)> shouldCheck = {});
+        std::function<bool(const std::string&)> shouldCheckHidl,
+        std::function<bool(const std::string&)> shouldCheckAidl);
 
     // Check that all HALs in all framework compatibility matrices have the
     // proper interface definition (HIDL / AIDL files).
