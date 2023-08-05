@@ -1227,17 +1227,15 @@ android::base::Result<std::vector<CompatibilityMatrix>> VintfObject::getAllFrame
 android::base::Result<void> VintfObject::checkMissingHalsInMatrices(
     const std::vector<HidlInterfaceMetadata>& hidlMetadata,
     const std::vector<AidlInterfaceMetadata>& aidlMetadata,
-    std::function<bool(const std::string&)> shouldCheck) {
-    if (!shouldCheck) {
-        shouldCheck = [](const auto&) { return true; };
-    }
-
+    std::function<bool(const std::string&)> shouldCheckHidl,
+    std::function<bool(const std::string&)> shouldCheckAidl) {
     auto matrixFragments = getAllFrameworkMatrixLevels();
     if (!matrixFragments.ok()) return matrixFragments.error();
 
     // Filter aidlMetadata and hidlMetadata with shouldCheck.
-    auto allAidlVintfPackages = AidlMetadataToVintfPackages(aidlMetadata, shouldCheck);
-    auto allHidlPackagesAndVersions = HidlMetadataToPackagesAndVersions(hidlMetadata, shouldCheck);
+    auto allAidlVintfPackages = AidlMetadataToVintfPackages(aidlMetadata, shouldCheckAidl);
+    auto allHidlPackagesAndVersions =
+        HidlMetadataToPackagesAndVersions(hidlMetadata, shouldCheckHidl);
 
     // Filter out instances in allAidlVintfPackages and allHidlPackagesAndVersions that are
     // in the matrices.
@@ -1258,10 +1256,13 @@ android::base::Result<void> VintfObject::checkMissingHalsInMatrices(
                     return true;  // continue to next instance
                 }
                 default: {
-                    if (shouldCheck(matrixInstance.package())) {
-                        errors.push_back("HAL package " + matrixInstance.package() +
-                                         " is not allowed to have format " +
-                                         to_string(matrixInstance.format()) + ".");
+                    for (Version v = matrixInstance.versionRange().minVer();
+                         v <= matrixInstance.versionRange().maxVer(); ++v.minorVer) {
+                        if (shouldCheckHidl(toFQNameString(matrixInstance.package(), v))) {
+                            errors.push_back("HAL package " + matrixInstance.package() +
+                                             " is not allowed to have format " +
+                                             to_string(matrixInstance.format()) + ".");
+                        }
                     }
                     return true;  // continue to next instance
                 }
