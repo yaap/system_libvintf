@@ -46,6 +46,7 @@ cc_test {
     static_libs: [
         "libgmock",
         "libgtest",
+        "libaidlmetadata",
         "libassemblevintf",
         "libvts_vintf_test_common",
     ],
