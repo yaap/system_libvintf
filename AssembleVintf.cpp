@@ -24,6 +24,7 @@
 #include <string>
 #include <unordered_map>
 
+#include <aidl/metadata.h>
 #include <android-base/file.h>
 #include <android-base/parseint.h>
 #include <android-base/strings.h>
@@ -69,6 +70,34 @@ class AssembleVintfImpl : public AssembleVintf {
     using ConditionedConfig = std::pair<Condition, std::vector<KernelConfig> /* configs */>;
 
    public:
+    void setFakeAidlMetadata(const std::vector<AidlInterfaceMetadata>& metadata) override {
+        mFakeAidlMetadata = metadata;
+    }
+
+    std::vector<AidlInterfaceMetadata> getAidlMetadata() const {
+        if (!mFakeAidlMetadata.empty()) {
+            return mFakeAidlMetadata;
+        } else {
+            return AidlInterfaceMetadata::all();
+        }
+    }
+
+    void setFakeAidlUseUnfrozen(const std::optional<bool>& use) override {
+        mFakeAidlUseUnfrozen = use;
+    }
+
+    bool getAidlUseUnfrozen() const {
+        if (mFakeAidlUseUnfrozen.has_value()) {
+            return *mFakeAidlUseUnfrozen;
+        } else {
+#ifdef AIDL_USE_UNFROZEN
+            return true;
+#else
+            return false;
+#endif
+        }
+    }
+
     void setFakeEnv(const std::string& key, const std::string& value) { mFakeEnv[key] = value; }
 
     std::string getEnv(const std::string& key) const {
@@ -351,6 +380,35 @@ class AssembleVintfImpl : public AssembleVintf {
         return true;
     }
 
+    // Set the manifest version for AIDL interfaces to 'version - 1' if the HAL is
+    // implementing the latest unfrozen version and the release configuration
+    // prevents the use of the unfrozen version
+    bool setManifestAidlHalVersion(HalManifest* manifest) {
+        const std::vector<AidlInterfaceMetadata> aidlMetadata = getAidlMetadata();
+        for (ManifestHal& hal : manifest->getHals()) {
+            if (hal.format != HalFormat::AIDL) continue;
+            if (hal.versions.size() != 1) {
+                err() << "HAL manifest entries must only contain one version of an AIDL HAL but "
+                         "found "
+                      << hal.versions.size() << " for " << hal.name << std::endl;
+                return false;
+            }
+            size_t halVersion = hal.versions.front().minorVer;
+            for (const AidlInterfaceMetadata& metadata : aidlMetadata) {
+                if (metadata.has_development && hal.getName() == metadata.name) {
+                    auto it = std::max_element(metadata.versions.begin(), metadata.versions.end());
+                    size_t latestVersion = it == metadata.versions.end() ? 1 : *it;
+                    // TODO(294920591) remove the use of getAidlUseUnfrozen when
+                    // it's no longer needed
+                    if (latestVersion < halVersion && !getAidlUseUnfrozen()) {
+                        hal.versions[0] = hal.versions[0].withMinor(halVersion - 1);
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
     bool checkDeviceManifestNoKernelLevel(const HalManifest& manifest) {
         if (manifest.level() != Level::UNSPECIFIED &&
             manifest.level() >= details::kEnforceDeviceManifestNoKernelLevel &&
@@ -428,6 +486,10 @@ class AssembleVintfImpl : public AssembleVintf {
             for (auto&& v : getEnvList("PLATFORM_SYSTEMSDK_VERSIONS")) {
                 halManifest->framework.mSystemSdk.mVersions.emplace(std::move(v));
             }
+        }
+
+        if (!setManifestAidlHalVersion(halManifest)) {
+            return false;
         }
 
         outputInputs(*halManifests);
@@ -870,6 +932,8 @@ class AssembleVintfImpl : public AssembleVintf {
     SerializeFlags::Type mSerializeFlags = SerializeFlags::EVERYTHING;
     std::map<KernelVersion, std::vector<NamedIstream>> mKernels;
     std::map<std::string, std::string> mFakeEnv;
+    std::vector<AidlInterfaceMetadata> mFakeAidlMetadata;
+    std::optional<bool> mFakeAidlUseUnfrozen;
     CheckFlags::Type mCheckFlags = CheckFlags::DEFAULT;
 
     enum class CoreHalsStrategy { DEFAULT, ONLY, DISALLOW };
