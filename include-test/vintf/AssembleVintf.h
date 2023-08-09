@@ -20,9 +20,11 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
+#include <aidl/metadata.h>
 #include <vintf/Version.h>
 
 namespace android {
@@ -53,6 +55,8 @@ class AssembleVintf {
     virtual std::istream& setCheckInputStream(const std::string& name, Istream&&) = 0;
     virtual std::istream& addKernelConfigInputStream(const KernelVersion& kernelVer,
                                                      const std::string& name, Istream&& in) = 0;
+    virtual void setFakeAidlMetadata(const std::vector<AidlInterfaceMetadata>& metadata) = 0;
+    virtual void setFakeAidlUseUnfrozen(const std::optional<bool>& use) = 0;
     virtual void setFakeEnv(const std::string& key, const std::string& value) = 0;
     virtual bool setCoreHalsStrategy(const std::string& allowedHal) = 0;
 
