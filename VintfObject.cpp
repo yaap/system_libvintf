@@ -1140,6 +1140,8 @@ std::string StripHidlInterface(const std::string& fqNameString) {
     return fqName.getPackageAndVersion().string();
 }
 
+// StripAidlType(android.hardware.foo.IFoo)
+// -> android.hardware.foo
 std::string StripAidlType(const std::string& type) {
     auto items = android::base::Split(type, ".");
     if (items.empty()) {
@@ -1147,6 +1149,12 @@ std::string StripAidlType(const std::string& type) {
     }
     items.erase(items.end() - 1);
     return android::base::Join(items, ".");
+}
+
+// GetAidlPackageAndVersion(android.hardware.foo.IFoo, 1)
+// -> android.hardware.foo@1
+std::string GetAidlPackageAndVersion(const std::string& package, size_t version) {
+    return package + "@" + std::to_string(version);
 }
 
 // android.hardware.foo@1.0
@@ -1160,16 +1168,32 @@ std::set<std::string> HidlMetadataToPackagesAndVersions(
     return ret;
 }
 
-// android.hardware.foo
+// android.hardware.foo@1
 // All non-vintf stable interfaces are filtered out.
-std::set<std::string> AidlMetadataToVintfPackages(
+android::base::Result<std::set<std::string>> AidlMetadataToVintfPackagesAndVersions(
     const std::vector<AidlInterfaceMetadata>& aidlMetadata,
     const std::function<bool(const std::string&)>& shouldCheck) {
     std::set<std::string> ret;
     for (const auto& item : aidlMetadata) {
-        if (item.stability == "vintf") {
-            for (const auto& type : item.types) {
-                InsertIf(StripAidlType(type), shouldCheck, &ret);
+        if (item.stability != "vintf") {
+            continue;
+        }
+        for (const auto& type : item.types) {
+            auto package = StripAidlType(type);
+            for (const auto& version : item.versions) {
+                InsertIf(GetAidlPackageAndVersion(package, version), shouldCheck, &ret);
+            }
+            if (item.has_development) {
+                auto maxVerIt = std::max_element(item.versions.begin(), item.versions.end());
+                // If no frozen versions, the in-development version is 1.
+                size_t maxVer = maxVerIt == item.versions.end() ? 0 : *maxVerIt;
+                auto nextVer = maxVer + 1;
+                if (nextVer < maxVer) {
+                    return android::base::Error()
+                           << "Bad version " << maxVer << " for AIDL type " << type
+                           << "; integer overflow when inferring in-development version";
+                }
+                InsertIf(GetAidlPackageAndVersion(package, nextVer), shouldCheck, &ret);
             }
         }
     }
@@ -1233,7 +1257,9 @@ android::base::Result<void> VintfObject::checkMissingHalsInMatrices(
     if (!matrixFragments.ok()) return matrixFragments.error();
 
     // Filter aidlMetadata and hidlMetadata with shouldCheck.
-    auto allAidlVintfPackages = AidlMetadataToVintfPackages(aidlMetadata, shouldCheckAidl);
+    auto allAidlPackagesAndVersions =
+        AidlMetadataToVintfPackagesAndVersions(aidlMetadata, shouldCheckAidl);
+    if (!allAidlPackagesAndVersions.ok()) return allAidlPackagesAndVersions.error();
     auto allHidlPackagesAndVersions =
         HidlMetadataToPackagesAndVersions(hidlMetadata, shouldCheckHidl);
 
@@ -1244,7 +1270,11 @@ android::base::Result<void> VintfObject::checkMissingHalsInMatrices(
         matrix.forEachInstance([&](const MatrixInstance& matrixInstance) {
             switch (matrixInstance.format()) {
                 case HalFormat::AIDL: {
-                    allAidlVintfPackages.erase(matrixInstance.package());
+                    for (Version v = matrixInstance.versionRange().minVer();
+                         v <= matrixInstance.versionRange().maxVer(); ++v.minorVer) {
+                        allAidlPackagesAndVersions->erase(
+                            GetAidlPackageAndVersion(matrixInstance.package(), v.minorVer));
+                    }
                     return true;  // continue to next instance
                 }
                 case HalFormat::HIDL: {
@@ -1275,10 +1305,10 @@ android::base::Result<void> VintfObject::checkMissingHalsInMatrices(
             "The following HIDL packages are not found in any compatibility matrix fragments:\t\n" +
             android::base::Join(allHidlPackagesAndVersions, "\t\n"));
     }
-    if (!allAidlVintfPackages.empty()) {
+    if (!allAidlPackagesAndVersions->empty()) {
         errors.push_back(
             "The following AIDL packages are not found in any compatibility matrix fragments:\t\n" +
-            android::base::Join(allAidlVintfPackages, "\t\n"));
+            android::base::Join(*allAidlPackagesAndVersions, "\t\n"));
     }
 
     if (!errors.empty()) {
