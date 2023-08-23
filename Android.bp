@@ -90,6 +90,11 @@ cc_library {
         "XmlFile.cpp",
         "utils.cpp",
     ],
+    product_variables: {
+        release_aidl_use_unfrozen: {
+            cflags: ["-DAIDL_USE_UNFROZEN"],
+        },
+    },
     generated_sources: ["apex-info-list-tinyxml"],
     shared_libs: libvintf_private_deps,
     header_libs: [
