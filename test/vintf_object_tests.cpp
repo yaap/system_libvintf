@@ -437,6 +437,7 @@ class VintfObjectTestBase : public ::testing::Test {
         return static_cast<MockPropertyFetcher&>(*vintfObject->getPropertyFetcher());
     }
 
+    void setCheckAidlFCM(bool check) { vintfObject->setFakeCheckAidlCompatMatrix(check); }
     void useEmptyFileSystem() {
         // By default, no files exist in the file system.
         // Use EXPECT_CALL because more specific expectation of fetch and listFiles will come along.
@@ -2580,6 +2581,7 @@ TEST_F(CheckMissingHalsTest, FailVendor) {
     auto res = vintfObject->checkMissingHalsInMatrices(hidl, {}, defaultPred, defaultPred);
     EXPECT_THAT(res, HasError(WithMessage(HasSubstr("vendor.foo.hidl@1.0"))));
 
+    setCheckAidlFCM(true);
     res = vintfObject->checkMissingHalsInMatrices({}, aidl, defaultPred, defaultPred);
     EXPECT_THAT(res, HasError(WithMessage(HasSubstr("vendor.foo.aidl"))));
 
@@ -2600,6 +2602,7 @@ TEST_F(CheckMissingHalsTest, FailMajorVersion) {
     std::vector<AidlInterfaceMetadata> aidl{
         {.types = {"android.hardware.aidl2.IAidl"}, .stability = "vintf", .versions = {1}}};
 
+    setCheckAidlFCM(true);
     auto res = vintfObject->checkMissingHalsInMatrices(hidl, {}, defaultPred, defaultPred);
     EXPECT_THAT(res, HasError(WithMessage(HasSubstr("android.hardware.hidl@2.0"))));
 
@@ -2633,9 +2636,28 @@ TEST_F(CheckMissingHalsTest, FailMinorVersion) {
     auto res = vintfObject->checkMissingHalsInMatrices(hidl, {}, defaultPred, defaultPred);
     EXPECT_THAT(res, HasError(WithMessage(HasSubstr("android.hardware.hidl@1.1"))));
 
+    setCheckAidlFCM(true);
     res = vintfObject->checkMissingHalsInMatrices({}, aidl, defaultPred, defaultPred);
     EXPECT_THAT(res, HasError(WithMessage(HasSubstr("android.hardware.aidl@2"))));
 
+    res = vintfObject->checkMissingHalsInMatrices(hidl, aidl, defaultPred, defaultPred);
+    EXPECT_THAT(res, HasError(WithMessage(HasSubstr("android.hardware.hidl@1.1"))));
+    EXPECT_THAT(res, HasError(WithMessage(HasSubstr("android.hardware.aidl@2"))));
+}
+
+TEST_F(CheckMissingHalsTest, SkipFcmCheckForAidl) {
+    std::vector<HidlInterfaceMetadata> hidl{{.name = "android.hardware.hidl@1.1"}};
+    std::vector<AidlInterfaceMetadata> aidl{
+        {.types = {"android.hardware.aidl.IAidl"}, .stability = "vintf", .versions = {1, 2}}};
+
+    auto res = vintfObject->checkMissingHalsInMatrices(hidl, {}, defaultPred, defaultPred);
+    EXPECT_THAT(res, HasError(WithMessage(HasSubstr("android.hardware.hidl@1.1"))));
+
+    setCheckAidlFCM(false);
+    res = vintfObject->checkMissingHalsInMatrices({}, aidl, defaultPred, defaultPred);
+    EXPECT_THAT(res, Ok());
+
+    setCheckAidlFCM(true);
     res = vintfObject->checkMissingHalsInMatrices(hidl, aidl, defaultPred, defaultPred);
     EXPECT_THAT(res, HasError(WithMessage(HasSubstr("android.hardware.hidl@1.1"))));
     EXPECT_THAT(res, HasError(WithMessage(HasSubstr("android.hardware.aidl@2"))));
@@ -2657,6 +2679,7 @@ TEST_F(CheckMissingHalsTest, FailAidlInDevelopment) {
                                              .versions = {1},
                                              .has_development = true}};
 
+    setCheckAidlFCM(true);
     auto res = vintfObject->checkMissingHalsInMatrices({}, aidl, defaultPred, defaultPred);
     EXPECT_THAT(res, HasError(WithMessage(HasSubstr("android.hardware.aidl@2"))));
 }
