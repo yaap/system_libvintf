@@ -261,6 +261,9 @@ class VintfObject {
 
     details::LockedRuntimeInfoCache mDeviceRuntimeInfo;
 
+    bool getCheckAidlCompatMatrix();
+    std::optional<bool> mFakeCheckAidlCompatibilityMatrix;
+
     // Expose functions for testing and recovery
     friend class testing::VintfObjectTestBase;
     friend class testing::VintfObjectRecoveryTest;
@@ -273,6 +276,7 @@ class VintfObject {
     friend class details::FmOnlyVintfObject;
 
    protected:
+    void setFakeCheckAidlCompatMatrix(bool check) { mFakeCheckAidlCompatibilityMatrix = check; }
     virtual const std::unique_ptr<FileSystem>& getFileSystem();
     virtual const std::unique_ptr<PropertyFetcher>& getPropertyFetcher();
     virtual const std::unique_ptr<ObjectFactory<RuntimeInfo>>& getRuntimeInfoFactory();

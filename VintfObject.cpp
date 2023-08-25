@@ -1248,6 +1248,17 @@ android::base::Result<std::vector<CompatibilityMatrix>> VintfObject::getAllFrame
     return matrixFragments;
 }
 
+// Check the compatibility matrix for the latest available AIDL interfaces only
+// when AIDL_USE_UNFROZEN is defined
+bool VintfObject::getCheckAidlCompatMatrix() {
+#ifdef AIDL_USE_UNFROZEN
+    constexpr bool kAidlUseUnfrozen = true;
+#else
+    constexpr bool kAidlUseUnfrozen = false;
+#endif
+    return mFakeCheckAidlCompatibilityMatrix.value_or(kAidlUseUnfrozen);
+}
+
 android::base::Result<void> VintfObject::checkMissingHalsInMatrices(
     const std::vector<HidlInterfaceMetadata>& hidlMetadata,
     const std::vector<AidlInterfaceMetadata>& aidlMetadata,
@@ -1305,7 +1316,7 @@ android::base::Result<void> VintfObject::checkMissingHalsInMatrices(
             "The following HIDL packages are not found in any compatibility matrix fragments:\t\n" +
             android::base::Join(allHidlPackagesAndVersions, "\t\n"));
     }
-    if (!allAidlPackagesAndVersions->empty()) {
+    if (!allAidlPackagesAndVersions->empty() && getCheckAidlCompatMatrix()) {
         errors.push_back(
             "The following AIDL packages are not found in any compatibility matrix fragments:\t\n" +
             android::base::Join(*allAidlPackagesAndVersions, "\t\n"));
