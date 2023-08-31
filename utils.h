@@ -115,6 +115,8 @@ static bool mergeField(T* dst, T* src, const T& empty = T{}) {
     const std::string& package, const Version& version, const std::string& interface,
     const std::string& instance, HalFormat format, std::string* appendedError);
 
+bool isCoreHal(const std::string& halName);
+
 }  // namespace details
 }  // namespace vintf
 }  // namespace android
