@@ -732,12 +732,12 @@ class AssembleVintfImpl : public AssembleVintf {
                 case CoreHalsStrategy::DEFAULT:
                     break;
                 case CoreHalsStrategy::ONLY: {
-                    if (!isCoreHal(hal.name)) {
+                    if (!details::isCoreHal(hal.name)) {
                         violators.push_back(hal.name);
                     }
                 } break;
                 case CoreHalsStrategy::DISALLOW: {
-                    if (isCoreHal(hal.name)) {
+                    if (details::isCoreHal(hal.name)) {
                         violators.push_back(hal.name);
                     }
                 } break;
@@ -756,23 +756,6 @@ class AssembleVintfImpl : public AssembleVintf {
         }
 
         return true;
-    }
-
-    static bool isCoreHal(const std::string& halName) {
-        std::vector<std::string_view> allowedPrefixes{
-            "android.hardware.",
-            "android.frameworks.",
-            "android.system.",
-        };
-        for (auto allowedPrefix : allowedPrefixes) {
-            if (android::base::StartsWith(halName, allowedPrefix)) {
-                return true;
-            }
-        }
-        if (halName == "mapper") {
-            return true;
-        }
-        return false;
     }
 
     enum AssembleStatus { SUCCESS, FAIL_AND_EXIT, TRY_NEXT };
