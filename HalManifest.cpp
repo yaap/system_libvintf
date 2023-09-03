@@ -403,6 +403,12 @@ std::vector<std::string> HalManifest::checkApexHals(const CompatibilityMatrix& m
     // Below check for INVALID case (hal.updatableViaApex == <any> && !matrixHal.updatableViaApex)
 
     for (const auto& hal : getHals()) {
+        // We can't expect `updatable-via-apex=true` for non-core HALs because FCM for non-core HALs
+        // will be missing in mixed-build testing.
+        if (!details::isCoreHal(hal.getName())) {
+            continue;
+        }
+
         bool updatableViaApex =
             hal.updatableViaApex().has_value() && !hal.updatableViaApex()->empty();
 
