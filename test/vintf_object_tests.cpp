@@ -420,10 +420,19 @@ const std::string systemMatrixKernel318 =
     "    </sepolicy>\n"
     "</compatibility-matrix>\n";
 
-const std::string apexManifest =
+const std::string apexCoreHalName = "android.hardware.apex.foo";
+const std::string apexNonCoreHalName = "android.apex.foo";
+const std::string apexCoreHalManifest =
     "<manifest " + kMetaVersionStr + " type=\"device\">\n"
     "    <hal format=\"aidl\">\n"
-    "        <name>android.apex.foo</name>\n"
+    "        <name>" + apexCoreHalName + "</name>\n"
+    "        <fqname>IApex/default</fqname>\n"
+    "    </hal>\n"
+    "</manifest>\n";
+const std::string apexNonCoreHalManifest =
+    "<manifest " + kMetaVersionStr + " type=\"device\">\n"
+    "    <hal format=\"aidl\">\n"
+    "        <name>" + apexNonCoreHalName + "</name>\n"
     "        <fqname>IApex/default</fqname>\n"
     "    </hal>\n"
     "</manifest>\n";
@@ -588,7 +597,7 @@ class VintfObjectTestBase : public ::testing::Test {
         return static_cast<MockApex&>(*vintfObject->getApex());
     }
     // Setup APEX calls
-    void SetUpApex(const std::string &manifest=apexManifest,
+    void SetUpApex(const std::string &manifest,
                    const std::string &apexDir="/apex/com.test/") {
 
         // Look in every APEX for data
@@ -713,7 +722,7 @@ class ApexCompatibilityTest : public VintfObjectTestBase {
             "</compatibility-matrix>\n";
         return out;
     }
-    std::string CreateApexHal(const std::string &attr) const {
+    std::string CreateApexHal(const std::string& halName, const std::string &attr) const {
         // Create HAL for compatibility matrix.
         //
         // Use input attr to determine how to set updatable-via-apex
@@ -729,7 +738,7 @@ class ApexCompatibilityTest : public VintfObjectTestBase {
         }
         std::string apexHal =
             "    <hal format=\"aidl\" " + updatable + ">\n"
-            "        <name>android.apex.foo</name>"
+            "        <name>" + halName + "</name>"
             "        <interface>  \n"
             "           <name>IApex</name> \n"
             "           <instance>default</instance> \n"
@@ -737,7 +746,7 @@ class ApexCompatibilityTest : public VintfObjectTestBase {
             "    </hal>\n";
         return apexHal;
     }
-    void setup(const std::string& systemMatrix) {
+    void setup(const std::string& systemMatrix, const std::string& apexManifest) {
         VintfObjectTestBase::SetUp();
         setupMockFetcher(vendorManifestXml1, systemMatrix,
                          systemManifestXml1, vendorMatrixXml1);
@@ -745,33 +754,44 @@ class ApexCompatibilityTest : public VintfObjectTestBase {
         expectSystemManifest();
         expectVendorMatrix();
         expectSystemMatrix();
-        SetUpApex();
+        SetUpApex(apexManifest);
     }
 };
 
 // Test updatable-via-apex attribute in compatibility matrix, only
 // the case with updatable-via-apex=true should be compatible.
-TEST_F(ApexCompatibilityTest, TRUE) {
+TEST_F(ApexCompatibilityTest, updatableTrueInFcm) {
     std::string error;
     // Set updatable-via-apex=true
-    std::string systemMatrix = CreateSystemMatrix(CreateApexHal("true"));
-    setup(systemMatrix);
+    std::string systemMatrix = CreateSystemMatrix(CreateApexHal(apexCoreHalName, "true"));
+    setup(systemMatrix, apexCoreHalManifest);
     ASSERT_EQ(COMPATIBLE,vintfObject->checkCompatibility(&error))<<error;
 }
-TEST_F(ApexCompatibilityTest, FALSE) {
+
+TEST_F(ApexCompatibilityTest, updatableFalseInFcm) {
     std::string error;
     // Set updatable-via-apex=false
-    std::string systemMatrix = CreateSystemMatrix(CreateApexHal("false"));
-    setup(systemMatrix);
+    std::string systemMatrix = CreateSystemMatrix(CreateApexHal(apexCoreHalName, "false"));
+    setup(systemMatrix, apexCoreHalManifest);
     ASSERT_NE(COMPATIBLE,vintfObject->checkCompatibility(&error))<< "Should have failed";
 }
-TEST_F(ApexCompatibilityTest, UNSET) {
+
+TEST_F(ApexCompatibilityTest, updatableNotSetInFcm) {
     std::string error;
     // Do not include updatable-via-apex attribute
-    std::string systemMatrix = CreateSystemMatrix(CreateApexHal(""));
-    setup(systemMatrix);
+    std::string systemMatrix = CreateSystemMatrix(CreateApexHal(apexCoreHalName, ""));
+    setup(systemMatrix, apexCoreHalManifest);
     ASSERT_NE(COMPATIBLE,vintfObject->checkCompatibility(&error))<< "Should have failed";
 }
+
+TEST_F(ApexCompatibilityTest, skipUpdatableCheckForNonCoreHal) {
+    std::string error;
+    // Do not include updatable-via-apex attribute
+    std::string systemMatrix = CreateSystemMatrix(CreateApexHal(apexNonCoreHalName, ""));
+    setup(systemMatrix, apexNonCoreHalManifest);
+    ASSERT_EQ(COMPATIBLE,vintfObject->checkCompatibility(&error))<<error;
+}
+
 const std::string vendorManifestKernelFcm =
         "<manifest " + kMetaVersionStr + " type=\"device\">\n"
         "    <kernel version=\"3.18.999\" target-level=\"92\"/>\n"
@@ -999,13 +1019,13 @@ bool containsOdmProductManifest(const std::shared_ptr<const HalManifest>& p) {
 }
 
 bool containsApexManifest(const std::shared_ptr<const HalManifest>& p) {
-    return !p->getAidlInstances("android.apex.foo", "IApex").empty();
+    return !p->getAidlInstances(apexCoreHalName, "IApex").empty();
 }
 
 class DeviceManifestTest : public VintfObjectTestBase {
    protected:
     void setupApex(const std::string &apexWithManifestDir="/apex/com.test/",
-                   const std::string &manifest=apexManifest,
+                   const std::string &manifest=apexCoreHalManifest,
                    const std::string &apexWithoutManifestDir= "/apex/com.novintf/") {
 
       // Mimic the system initialization
@@ -1272,13 +1292,13 @@ TEST_F(DeviceManifestTest, ApexCombine4) {
 TEST_F(DeviceManifestTest, ValidApexHal) {
     expectVendorManifest();
     noOdmManifest();
-    SetUpApex(apexManifest);
+    SetUpApex(apexCoreHalManifest);
     auto p = get();
     ASSERT_NE(nullptr, p);
     // HALs defined in APEX should set updatable-via-apex
     bool found = false;
     p->forEachInstance([&found](const ManifestInstance& instance){
-        if (instance.package() == "android.apex.foo") {
+        if (instance.package() == apexCoreHalName) {
             std::optional<std::string> apexName = "com.test";
             EXPECT_EQ(apexName, instance.updatableViaApex());
             found = true;
