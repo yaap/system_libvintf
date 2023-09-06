@@ -153,10 +153,6 @@ struct HalManifest : public HalGroup<ManifestHal>,
     // that other->empty() == true after execution.
     [[nodiscard]] bool addAll(HalManifest* other, std::string* error = nullptr);
 
-    // Return vector of instance names that are defined in an APEX that are not
-    // specified as updatable apex hals in the compatibility matrix.
-    std::vector<std::string> checkApexHals(const CompatibilityMatrix& mat) const;
-
    protected:
     // Check before add()
     bool shouldAdd(const ManifestHal& toAdd, std::string* error) const;
