@@ -353,10 +353,12 @@ class VintfObject {
 
     using ChildrenMap = std::multimap<std::string, std::string>;
     static bool IsHalDeprecated(const MatrixHal& oldMatrixHal,
+                                const std::string& oldMatrixHalFileName,
                                 const CompatibilityMatrix& targetMatrix,
                                 const std::shared_ptr<const HalManifest>& halManifest,
                                 const ChildrenMap& childrenMap, std::string* appendedError);
     static bool IsInstanceDeprecated(const MatrixInstance& oldMatrixInstance,
+                                     const std::string& oldMatrixInstanceFileName,
                                      const CompatibilityMatrix& targetMatrix,
                                      const std::shared_ptr<const HalManifest>& halManifest,
                                      const ChildrenMap& childrenMap, std::string* appendedError);
