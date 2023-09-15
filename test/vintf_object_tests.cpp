@@ -2727,7 +2727,7 @@ class VintfObjectHealthHalTest : public MultiMatrixTest,
         for (auto level : {Level::P, Level::Q, Level::R, Level::S, Level::T}) {
             ret.push_back({level, Version{2, 0}, level < Level::R});
             ret.push_back({level, Version{2, 1}, level < Level::T});
-            ret.push_back({level, 1, true});
+            ret.push_back({level, 1u, true});
         }
         return ret;
     }
@@ -2907,7 +2907,7 @@ class VintfObjectComposerHalTest : public MultiMatrixTest,
             ret.push_back({level, ComposerHalVersion{Version{2, 2}}, true});
             ret.push_back({level, ComposerHalVersion{Version{2, 3}}, true});
             ret.push_back({level, ComposerHalVersion{Version{2, 4}}, true});
-            ret.push_back({level, ComposerHalVersion{1}, true});
+            ret.push_back({level, ComposerHalVersion{1u}, true});
         }
         return ret;
     }
