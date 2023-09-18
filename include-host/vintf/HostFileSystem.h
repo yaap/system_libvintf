@@ -39,7 +39,7 @@ class HostFileSystem : public FileSystemImpl {
                    std::string* error) const override;
     status_t listFiles(const std::string& path, std::vector<std::string>* out,
                        std::string* error) const override;
-    status_t modifiedTime(const std::string& path, int64_t* mtime,
+    status_t modifiedTime(const std::string& path, TimeSpec* mtime,
                           std::string* error) const override;
 
    private:
