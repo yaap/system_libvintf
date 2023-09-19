@@ -22,10 +22,14 @@
 #include <string>
 #include <vector>
 
+#include <sys/stat.h>  // for timespec
+
 #include <utils/Errors.h>
 
 namespace android {
 namespace vintf {
+
+using TimeSpec = struct timespec;
 
 // Queries the file system in the correct way. Files can come from
 // an actual file system, a sub-directory, or from ADB, depending on the
@@ -45,7 +49,7 @@ class FileSystem {
                                std::string* error) const = 0;
     // Return NAME_NOT_FOUND if file is not found,
     //        OK if "mtime" is set with modified time of the file.
-    virtual status_t modifiedTime(const std::string& path, int64_t* mtime,
+    virtual status_t modifiedTime(const std::string& path, TimeSpec* mtime,
                                   std::string* error) const = 0;
 };
 
@@ -66,7 +70,7 @@ class FileSystemImpl : public FileSystem {
    public:
     status_t fetch(const std::string&, std::string*, std::string*) const override;
     status_t listFiles(const std::string&, std::vector<std::string>*, std::string*) const override;
-    status_t modifiedTime(const std::string& path, int64_t* mtime, std::string* error) const;
+    status_t modifiedTime(const std::string& path, TimeSpec* mtime, std::string* error) const;
 };
 
 // Class that does nothing.
@@ -74,7 +78,7 @@ class FileSystemNoOp : public FileSystem {
    public:
     status_t fetch(const std::string&, std::string*, std::string*) const override;
     status_t listFiles(const std::string&, std::vector<std::string>*, std::string*) const override;
-    status_t modifiedTime(const std::string& path, int64_t* mtime,
+    status_t modifiedTime(const std::string& path, TimeSpec* mtime,
                           std::string* error) const override;
 };
 
@@ -86,7 +90,7 @@ class FileSystemUnderPath : public FileSystem {
                    std::string* error) const override;
     status_t listFiles(const std::string& path, std::vector<std::string>* out,
                        std::string* error) const override;
-    status_t modifiedTime(const std::string& path, int64_t* mtime,
+    status_t modifiedTime(const std::string& path, TimeSpec* mtime,
                           std::string* error) const override;
 
    protected:
@@ -109,7 +113,7 @@ class PathReplacingFileSystem : public FileSystem {
                    std::string* error) const override;
     status_t listFiles(const std::string& path, std::vector<std::string>* out,
                        std::string* error) const override;
-    status_t modifiedTime(const std::string& path, int64_t* mtime,
+    status_t modifiedTime(const std::string& path, TimeSpec* mtime,
                           std::string* error) const override;
 
    private:
