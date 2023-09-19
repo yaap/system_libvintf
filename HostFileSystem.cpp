@@ -55,7 +55,7 @@ status_t HostFileSystem::listFiles(const std::string& path, std::vector<std::str
     return status;
 }
 
-status_t HostFileSystem::modifiedTime(const std::string& path, int64_t* mtime,
+status_t HostFileSystem::modifiedTime(const std::string& path, TimeSpec* mtime,
                                       std::string* error) const {
     auto resolved = resolve(path, error);
     if (resolved.empty()) {
