@@ -4475,10 +4475,10 @@ struct InMemoryFileSystem : FileSystem {
         *out = std::vector<std::string>{begin(entries), end(entries)};
         return OK;
     }
-    status_t modifiedTime(const std::string& path, int64_t* mtime, std::string* error) const {
+    status_t modifiedTime(const std::string& path, TimeSpec* mtime, std::string* error) const {
         (void)error;
         if (auto it = files.find(path); it != files.end()) {
-            *mtime = 0;
+            *mtime = TimeSpec{};
             return OK;
         }
         return NAME_NOT_FOUND;
