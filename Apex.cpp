@@ -38,6 +38,10 @@ static bool isApexReady(PropertyFetcher* propertyFetcher) {
 #endif
 }
 
+static bool operator==(const TimeSpec& a, const TimeSpec& b) {
+    return a.tv_sec == b.tv_sec && a.tv_nsec == b.tv_nsec;
+}
+
 status_t Apex::DeviceVintfDirs(FileSystem* fileSystem, PropertyFetcher* propertyFetcher,
                                std::vector<std::string>* dirs, std::string* error) {
     std::string apexInfoFile = kApexInfoFile;
@@ -47,7 +51,7 @@ status_t Apex::DeviceVintfDirs(FileSystem* fileSystem, PropertyFetcher* property
         apexDir = "/bootstrap-apex";
     }
     // Update cached mtime_
-    int64_t mtime{};
+    TimeSpec mtime{};
     auto status = fileSystem->modifiedTime(apexInfoFile, &mtime, error);
 
     if (status != OK) {
@@ -88,7 +92,7 @@ status_t Apex::DeviceVintfDirs(FileSystem* fileSystem, PropertyFetcher* property
     auto apexInfoList = com::android::apex::parseApexInfoList(xml.c_str());
     if (!apexInfoList.has_value()) {
         if (error) {
-            *error = std::string("Not a valid XML ") + kApexInfoFile;
+            *error = std::string("Not a valid XML: ") + apexInfoFile;
         }
         return UNKNOWN_ERROR;
     }
@@ -105,6 +109,7 @@ status_t Apex::DeviceVintfDirs(FileSystem* fileSystem, PropertyFetcher* property
             dirs->push_back(fmt::format("{}/{}/" VINTF_SUB_DIR, apexDir, apexInfo.getModuleName()));
         }
     }
+    LOG(INFO) << "Loaded APEX Infos from " << apexInfoFile;
     return OK;
 }
 
@@ -114,7 +119,7 @@ bool Apex::HasUpdate(FileSystem* fileSystem, PropertyFetcher* propertyFetcher) c
         return false;
     }
 
-    int64_t mtime{};
+    TimeSpec mtime{};
     std::string error;
     status_t status = fileSystem->modifiedTime(kApexInfoFile, &mtime, &error);
     if (status == NAME_NOT_FOUND) {
@@ -124,7 +129,10 @@ bool Apex::HasUpdate(FileSystem* fileSystem, PropertyFetcher* propertyFetcher) c
         LOG(ERROR) << error;
         return false;
     }
-    return mtime != mtime_;
+    if (mtime_.has_value() && mtime == mtime_.value()) {
+        return false;
+    }
+    return true;
 }
 
 }  // namespace details

@@ -48,7 +48,7 @@ class Apex : public ApexInterface {
                              std::vector<std::string>* out, std::string* error) override;
 
    private:
-    std::optional<int64_t> mtime_;
+    std::optional<TimeSpec> mtime_;
 };
 
 }  // namespace details
