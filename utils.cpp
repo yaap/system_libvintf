@@ -91,4 +91,21 @@ std::optional<FqInstance> convertLegacyInstanceIntoFqInstance(
     return parsed;
 }
 
+bool isCoreHal(const std::string& halName) {
+    std::vector<std::string_view> allowedPrefixes{
+        "android.hardware.",
+        "android.frameworks.",
+        "android.system.",
+    };
+    for (auto allowedPrefix : allowedPrefixes) {
+        if (halName.substr(0, allowedPrefix.size()) == allowedPrefix) {
+            return true;
+        }
+    }
+    if (halName == "mapper") {
+        return true;
+    }
+    return false;
+}
+
 }  // namespace android::vintf::details

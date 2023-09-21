@@ -382,29 +382,66 @@ class AssembleVintfImpl : public AssembleVintf {
 
     // Set the manifest version for AIDL interfaces to 'version - 1' if the HAL is
     // implementing the latest unfrozen version and the release configuration
-    // prevents the use of the unfrozen version
+    // prevents the use of the unfrozen version.
+    // If the AIDL interface has no previous frozen version, then the HAL
+    // manifest entry is removed entirely.
     bool setManifestAidlHalVersion(HalManifest* manifest) {
+        if (getAidlUseUnfrozen()) {
+            // If we are using unfrozen interfaces, then we have no work to do.
+            return true;
+        }
         const std::vector<AidlInterfaceMetadata> aidlMetadata = getAidlMetadata();
+        std::vector<std::string> halsToRemove;
         for (ManifestHal& hal : manifest->getHals()) {
             if (hal.format != HalFormat::AIDL) continue;
             if (hal.versions.size() != 1) {
                 err() << "HAL manifest entries must only contain one version of an AIDL HAL but "
                          "found "
-                      << hal.versions.size() << " for " << hal.name << std::endl;
+                      << hal.versions.size() << " for " << hal.getName() << std::endl;
                 return false;
             }
             size_t halVersion = hal.versions.front().minorVer;
             for (const AidlInterfaceMetadata& metadata : aidlMetadata) {
-                if (metadata.has_development && hal.getName() == metadata.name) {
-                    auto it = std::max_element(metadata.versions.begin(), metadata.versions.end());
-                    size_t latestVersion = it == metadata.versions.end() ? 1 : *it;
-                    // TODO(294920591) remove the use of getAidlUseUnfrozen when
-                    // it's no longer needed
-                    if (latestVersion < halVersion && !getAidlUseUnfrozen()) {
+                if (!metadata.has_development || hal.getName() != metadata.name) continue;
+
+                auto it = std::max_element(metadata.versions.begin(), metadata.versions.end());
+                if (it == metadata.versions.end()) {
+                    // TODO(292151564) There are a few known HALs that aren't
+                    // ready for this transition yet. Remove this list once they
+                    // are.
+                    static const std::set<std::string> kAllowedHals = {
+                        "vendor.google.bluetooth_ext",
+                        "vendor.google.wifi_ext",
+                    };
+                    // v1 manifest entries that are declaring unfrozen versions must be removed
+                    // from the manifest when the release configuration prevents the use of
+                    // unfrozen versions. this ensures service manager will deny registration.
+                    if (kAllowedHals.count(hal.getName()) == 0) {
+                        halsToRemove.push_back(hal.getName());
+                    }
+                } else {
+                    size_t latestVersion = *it;
+                    if (latestVersion < halVersion) {
+                        if (halVersion - latestVersion != 1) {
+                            err()
+                                << "The declared version of " << hal.getName() << " (" << halVersion
+                                << ") can't be more than one greater than its last frozen version ("
+                                << latestVersion << ")." << std::endl;
+                            return false;
+                        }
                         hal.versions[0] = hal.versions[0].withMinor(halVersion - 1);
                     }
                 }
             }
+        }
+        for (const auto& name : halsToRemove) {
+            // These services should not be installed on the device, but there
+            // are cases where the service is also service other HAL interfaces
+            // and will remain on the device.
+            out() << "INFO: Removing HAL from the manifest because it is declaring V1 of a new "
+                     "unfrozen interface which is not allowed in this release configuration: "
+                  << name << std::endl;
+            manifest->removeHals(name, details::kDefaultAidlVersion.majorVer);
         }
         return true;
     }
@@ -732,12 +769,12 @@ class AssembleVintfImpl : public AssembleVintf {
                 case CoreHalsStrategy::DEFAULT:
                     break;
                 case CoreHalsStrategy::ONLY: {
-                    if (!isCoreHal(hal.name)) {
+                    if (!details::isCoreHal(hal.name)) {
                         violators.push_back(hal.name);
                     }
                 } break;
                 case CoreHalsStrategy::DISALLOW: {
-                    if (isCoreHal(hal.name)) {
+                    if (details::isCoreHal(hal.name)) {
                         violators.push_back(hal.name);
                     }
                 } break;
@@ -756,23 +793,6 @@ class AssembleVintfImpl : public AssembleVintf {
         }
 
         return true;
-    }
-
-    static bool isCoreHal(const std::string& halName) {
-        std::vector<std::string_view> allowedPrefixes{
-            "android.hardware.",
-            "android.frameworks.",
-            "android.system.",
-        };
-        for (auto allowedPrefix : allowedPrefixes) {
-            if (android::base::StartsWith(halName, allowedPrefix)) {
-                return true;
-            }
-        }
-        if (halName == "mapper") {
-            return true;
-        }
-        return false;
     }
 
     enum AssembleStatus { SUCCESS, FAIL_AND_EXIT, TRY_NEXT };

@@ -786,13 +786,14 @@ std::vector<std::string> dumpFileList(const std::string& sku) {
 }  // namespace details
 
 bool VintfObject::IsHalDeprecated(const MatrixHal& oldMatrixHal,
+                                  const std::string& oldMatrixHalFileName,
                                   const CompatibilityMatrix& targetMatrix,
                                   const std::shared_ptr<const HalManifest>& deviceManifest,
                                   const ChildrenMap& childrenMap, std::string* appendedError) {
     bool isDeprecated = false;
     oldMatrixHal.forEachInstance([&](const MatrixInstance& oldMatrixInstance) {
-        if (IsInstanceDeprecated(oldMatrixInstance, targetMatrix, deviceManifest, childrenMap,
-                                 appendedError)) {
+        if (IsInstanceDeprecated(oldMatrixInstance, oldMatrixHalFileName, targetMatrix,
+                                 deviceManifest, childrenMap, appendedError)) {
             isDeprecated = true;
         }
         return true;  // continue to check next instance
@@ -805,6 +806,7 @@ bool VintfObject::IsHalDeprecated(const MatrixHal& oldMatrixHal,
 // matches instancePattern, return true iff for all child interfaces (from
 // GetListedInstanceInheritance), IsFqInstanceDeprecated returns false.
 bool VintfObject::IsInstanceDeprecated(const MatrixInstance& oldMatrixInstance,
+                                       const std::string& oldMatrixInstanceFileName,
                                        const CompatibilityMatrix& targetMatrix,
                                        const std::shared_ptr<const HalManifest>& deviceManifest,
                                        const ChildrenMap& childrenMap, std::string* appendedError) {
@@ -838,7 +840,19 @@ bool VintfObject::IsInstanceDeprecated(const MatrixInstance& oldMatrixInstance,
                 errors.clear();
                 return false;  // break
             }
-            errors.push_back(result.error().message());
+            std::string error = result.error().message() + "\n    ";
+            std::string servedFqInstanceString =
+                toFQNameString(package, servedVersion, interface, servedInstance);
+            if (fqInstance.string() == servedFqInstanceString) {
+                error += "because it matches ";
+            } else {
+                error += "because it inherits from " + fqInstance.string() + " that matches ";
+            }
+            error += oldMatrixInstance.description(oldMatrixInstance.versionRange().minVer()) +
+                     " from " + oldMatrixInstanceFileName;
+            errors.push_back(error);
+            // Do not immediately think (package, servedVersion, interface, servedInstance)
+            // is deprecated; check parents too.
         }
 
         if (errors.empty()) {
@@ -1030,7 +1044,8 @@ int32_t VintfObject::checkDeprecation(const std::vector<HidlInterfaceMetadata>& 
         if (namedMatrix.level() == Level::UNSPECIFIED) continue;
         if (namedMatrix.level() > deviceLevel) continue;
         for (const MatrixHal& hal : namedMatrix.getHals()) {
-            if (IsHalDeprecated(hal, *targetMatrix, deviceManifest, childrenMap, error)) {
+            if (IsHalDeprecated(hal, namedMatrix.fileName(), *targetMatrix, deviceManifest,
+                                childrenMap, error)) {
                 isDeprecated = true;
             }
         }
@@ -1248,6 +1263,17 @@ android::base::Result<std::vector<CompatibilityMatrix>> VintfObject::getAllFrame
     return matrixFragments;
 }
 
+// Check the compatibility matrix for the latest available AIDL interfaces only
+// when AIDL_USE_UNFROZEN is defined
+bool VintfObject::getCheckAidlCompatMatrix() {
+#ifdef AIDL_USE_UNFROZEN
+    constexpr bool kAidlUseUnfrozen = true;
+#else
+    constexpr bool kAidlUseUnfrozen = false;
+#endif
+    return mFakeCheckAidlCompatibilityMatrix.value_or(kAidlUseUnfrozen);
+}
+
 android::base::Result<void> VintfObject::checkMissingHalsInMatrices(
     const std::vector<HidlInterfaceMetadata>& hidlMetadata,
     const std::vector<AidlInterfaceMetadata>& aidlMetadata,
@@ -1305,7 +1331,7 @@ android::base::Result<void> VintfObject::checkMissingHalsInMatrices(
             "The following HIDL packages are not found in any compatibility matrix fragments:\t\n" +
             android::base::Join(allHidlPackagesAndVersions, "\t\n"));
     }
-    if (!allAidlPackagesAndVersions->empty()) {
+    if (!allAidlPackagesAndVersions->empty() && getCheckAidlCompatMatrix()) {
         errors.push_back(
             "The following AIDL packages are not found in any compatibility matrix fragments:\t\n" +
             android::base::Join(*allAidlPackagesAndVersions, "\t\n"));

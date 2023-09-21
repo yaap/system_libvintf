@@ -261,6 +261,9 @@ class VintfObject {
 
     details::LockedRuntimeInfoCache mDeviceRuntimeInfo;
 
+    bool getCheckAidlCompatMatrix();
+    std::optional<bool> mFakeCheckAidlCompatibilityMatrix;
+
     // Expose functions for testing and recovery
     friend class testing::VintfObjectTestBase;
     friend class testing::VintfObjectRecoveryTest;
@@ -273,6 +276,7 @@ class VintfObject {
     friend class details::FmOnlyVintfObject;
 
    protected:
+    void setFakeCheckAidlCompatMatrix(bool check) { mFakeCheckAidlCompatibilityMatrix = check; }
     virtual const std::unique_ptr<FileSystem>& getFileSystem();
     virtual const std::unique_ptr<PropertyFetcher>& getPropertyFetcher();
     virtual const std::unique_ptr<ObjectFactory<RuntimeInfo>>& getRuntimeInfoFactory();
@@ -349,10 +353,12 @@ class VintfObject {
 
     using ChildrenMap = std::multimap<std::string, std::string>;
     static bool IsHalDeprecated(const MatrixHal& oldMatrixHal,
+                                const std::string& oldMatrixHalFileName,
                                 const CompatibilityMatrix& targetMatrix,
                                 const std::shared_ptr<const HalManifest>& halManifest,
                                 const ChildrenMap& childrenMap, std::string* appendedError);
     static bool IsInstanceDeprecated(const MatrixInstance& oldMatrixInstance,
+                                     const std::string& oldMatrixInstanceFileName,
                                      const CompatibilityMatrix& targetMatrix,
                                      const std::shared_ptr<const HalManifest>& halManifest,
                                      const ChildrenMap& childrenMap, std::string* appendedError);
