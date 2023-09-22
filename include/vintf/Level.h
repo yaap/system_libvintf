@@ -30,6 +30,7 @@ namespace vintf {
 // This is not a strong-typed enum because Level can be any integer value. Listed are some
 // special values.
 enum Level : size_t {
+    // LINT.IfChange
     // Non-Treble devices.
     LEGACY = 0,
     // Actual values starts from 1.
@@ -45,6 +46,7 @@ enum Level : size_t {
     // To add new values: (1) add above this line.  (2) edit if needed:
     // - RuntimeInfo::gkiAndroidReleaseToLevel
     // - analyze_matrix.cpp, GetDescription()
+    // LINT.ThenChange(/analyze_matrix/analyze_matrix.cpp)
 
     // The maximum of all specified Levels + 1.
     LAST_PLUS_ONE,
