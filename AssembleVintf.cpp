@@ -429,6 +429,11 @@ class AssembleVintfImpl : public AssembleVintf {
                                 << latestVersion << ")." << std::endl;
                             return false;
                         }
+                        err() << "INFO: Downgrading HAL " << hal.getName()
+                              << " in the manifest from V" << halVersion << " to V"
+                              << halVersion - 1
+                              << " because it is unfrozen and unfrozen interfaces "
+                              << "are not allowed in this release configuration." << std::endl;
                         hal.versions[0] = hal.versions[0].withMinor(halVersion - 1);
                     }
                 }
