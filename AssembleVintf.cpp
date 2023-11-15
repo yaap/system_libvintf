@@ -406,12 +406,10 @@ class AssembleVintfImpl : public AssembleVintf {
 
                 auto it = std::max_element(metadata.versions.begin(), metadata.versions.end());
                 if (it == metadata.versions.end()) {
-                    // TODO(292151564) There are a few known HALs that aren't
-                    // ready for this transition yet. Remove this list once they
-                    // are.
+                    // Some HALs may not be ready for this transition
                     static const std::set<std::string> kAllowedHals = {
+                        // TODO(b/296130317)
                         "vendor.google.bluetooth_ext",
-                        "vendor.google.wifi_ext",
                     };
                     // v1 manifest entries that are declaring unfrozen versions must be removed
                     // from the manifest when the release configuration prevents the use of
