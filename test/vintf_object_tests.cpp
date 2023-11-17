@@ -164,7 +164,7 @@ const std::string vendorMatrixXml1 =
 
 const std::string systemMatrixXml2 =
     "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\">\n"
-    "    <hal format=\"hidl\">\n"
+    "    <hal format=\"hidl\" optional=\"false\">\n"
     "        <name>android.hardware.foo</name>\n"
     "        <version>1.0</version>\n"
     "    </hal>\n"
@@ -2523,7 +2523,7 @@ class CheckMatricesWithHalDefTestBase : public MultiMatrixTest {
         // clang-format off
         std::vector<std::string> matrices{
             "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
-            "    <hal format=\"hidl\">\n"
+            "    <hal format=\"hidl\" optional=\"false\">\n"
             "        <name>android.hardware.hidl</name>\n"
             "        <version>1.0</version>\n"
             "        <interface>\n"
@@ -2531,7 +2531,7 @@ class CheckMatricesWithHalDefTestBase : public MultiMatrixTest {
             "            <instance>default</instance>\n"
             "        </interface>\n"
             "    </hal>\n"
-            "    <hal format=\"aidl\">\n"
+            "    <hal format=\"aidl\" optional=\"false\">\n"
             "        <name>android.hardware.aidl</name>\n"
             "        <interface>\n"
             "            <name>IAidl</name>\n"

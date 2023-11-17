@@ -858,6 +858,25 @@ TEST_F(LibVintfTest, DeviceCompatibilityMatrixCoverter) {
 }
 
 // clang-format on
+
+TEST_F(LibVintfTest, CompatibilityMatrixDefaultOptionalTrue) {
+    auto xml = "<compatibility-matrix " + kMetaVersionStr + R"( type="device">
+            <hal format="aidl">
+                <name>android.foo.bar</name>
+                <version>1</version>
+                <interface>
+                    <name>IFoo</name>
+                    <instance>default</instance>
+                </interface>
+            </hal>
+        </compatibility-matrix>)";
+    CompatibilityMatrix cm;
+    EXPECT_TRUE(fromXml(&cm, xml));
+    auto hal = getAnyHal(cm, "android.foo.bar");
+    ASSERT_NE(nullptr, hal);
+    EXPECT_TRUE(hal->optional) << "If optional is not specified, it should be true by default";
+}
+
 TEST_F(LibVintfTest, IsValid) {
     EXPECT_TRUE(isValid(ManifestHal()));
 
@@ -2821,7 +2840,7 @@ TEST_F(LibVintfTest, AddOptionalHalUpdatableViaApex) {
 
     xml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
-        "    <hal format=\"aidl\">\n"
+        "    <hal format=\"aidl\" optional=\"false\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <interface>\n"
         "            <name>IFoo</name>\n"
@@ -2833,7 +2852,7 @@ TEST_F(LibVintfTest, AddOptionalHalUpdatableViaApex) {
 
     xml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"2\">\n"
-        "    <hal format=\"aidl\" updatable-via-apex=\"true\">\n"
+        "    <hal format=\"aidl\" optional=\"false\" updatable-via-apex=\"true\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <interface>\n"
         "            <name>IFoo</name>\n"
