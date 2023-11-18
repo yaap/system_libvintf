@@ -1536,6 +1536,95 @@ TEST_F(DeprecateTest, HidlMetadataDeprecate) {
         << "major@1.0 should be deprecated. " << error;
 }
 
+class RegexInstanceDeprecateTest : public VintfObjectTestBase {
+   protected:
+    virtual void SetUp() override {
+        VintfObjectTestBase::SetUp();
+        useEmptyFileSystem();
+        EXPECT_CALL(fetcher(), listFiles(StrEq(kSystemVintfDir), _, _))
+            .WillRepeatedly(Invoke([](const auto&, auto* out, auto*) {
+                *out = {
+                    "compatibility_matrix.1.xml",
+                    "compatibility_matrix.2.xml",
+                };
+                return ::android::OK;
+            }));
+        expectFetchRepeatedly(kSystemVintfDir + "compatibility_matrix.1.xml"s,
+            "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
+            "    <hal format=\"hidl\" optional=\"true\">\n"
+            "        <name>android.hardware.minor</name>\n"
+            "        <version>1.1</version>\n"
+            "        <interface>\n"
+            "            <name>IMinor</name>\n"
+            "            <regex-instance>instance.*</regex-instance>\n"
+            "        </interface>\n"
+            "    </hal>\n"
+            "    <hal format=\"aidl\" optional=\"true\">\n"
+            "        <name>android.hardware.minor</name>\n"
+            "        <version>101</version>\n"
+            "        <interface>\n"
+            "            <name>IMinor</name>\n"
+            "            <regex-instance>instance.*</regex-instance>\n"
+            "        </interface>\n"
+            "    </hal>\n"
+            "</compatibility-matrix>\n"
+        );
+        expectFetchRepeatedly(kSystemVintfDir + "compatibility_matrix.2.xml"s,
+            "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"2\">\n"
+            "    <hal format=\"hidl\" optional=\"true\">\n"
+            "        <name>android.hardware.minor</name>\n"
+            "        <version>1.2</version>\n"
+            "        <interface>\n"
+            "            <name>IMinor</name>\n"
+            "            <regex-instance>instance.*</regex-instance>\n"
+            "        </interface>\n"
+            "    </hal>\n"
+            "    <hal format=\"aidl\" optional=\"true\">\n"
+            "        <name>android.hardware.minor</name>\n"
+            "        <version>102</version>\n"
+            "        <interface>\n"
+            "            <name>IMinor</name>\n"
+            "            <regex-instance>instance.*</regex-instance>\n"
+            "        </interface>\n"
+            "    </hal>\n"
+            "</compatibility-matrix>\n");
+        expectFileNotExist(StrEq(kProductMatrix));
+        expectNeverFetch(kSystemLegacyMatrix);
+
+        expectFileNotExist(StartsWith("/odm/"));
+    }
+};
+
+TEST_F(RegexInstanceDeprecateTest, HidlNoDeprecate) {
+    expectVendorManifest(Level{2}, {
+        "android.hardware.minor@1.2::IMinor/instance1",
+    }, {
+        aidlFqInstance("android.hardware.minor", 102, "IMinor", "instance1"),
+    });
+    std::string error;
+    EXPECT_EQ(NO_DEPRECATED_HALS, vintfObject->checkDeprecation({}, &error)) << error;
+}
+
+TEST_F(RegexInstanceDeprecateTest, HidlDeprecate) {
+    expectVendorManifest(Level{2}, {
+        "android.hardware.minor@1.2::IMinor/instance1",
+        "android.hardware.minor@1.1::IMinor/instance2",
+    }, {});
+    std::string error;
+    EXPECT_EQ(DEPRECATED, vintfObject->checkDeprecation({}, &error))
+        << "minor@1.1::IMinor/instance2 is deprecated";
+}
+
+TEST_F(RegexInstanceDeprecateTest, AidlDeprecate) {
+    expectVendorManifest(Level{2}, {}, {
+        aidlFqInstance("android.hardware.minor", 102, "IMinor", "instance1"),
+        aidlFqInstance("android.hardware.minor", 101, "IMinor", "instance2"),
+    });
+    std::string error;
+    EXPECT_EQ(DEPRECATED, vintfObject->checkDeprecation({}, &error))
+        << "minor@101::IMinor/instance2 is deprecated";
+}
+
 class MultiMatrixTest : public VintfObjectTestBase {
    protected:
     void SetUp() override {
