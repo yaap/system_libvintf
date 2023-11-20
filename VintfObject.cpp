@@ -838,7 +838,7 @@ bool VintfObject::IsInstanceDeprecated(const MatrixInstance& oldMatrixInstance,
                                                  fqInstance, deviceManifest);
             if (result.ok()) {
                 errors.clear();
-                return false;  // break
+                break;
             }
             std::string error = result.error().message() + "\n    ";
             std::string servedFqInstanceString =
