@@ -17,7 +17,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -463,11 +462,6 @@ class AssembleVintfImpl : public AssembleVintf {
     }
 
     bool assembleHalManifest(HalManifests* halManifests) {
-        if (mCoreHalsStrategy != CoreHalsStrategy::DEFAULT) {
-            err() << "--core-hals must not be set when assembling HAL manifests." << std::endl;
-            return false;
-        }
-
         std::string error;
         HalManifest* halManifest = &halManifests->front();
         HalManifest* manifestWithLevel = nullptr;
@@ -747,51 +741,11 @@ class AssembleVintfImpl : public AssembleVintf {
             getFlag("FRAMEWORK_VBMETA_VERSION_OVERRIDE", &matrix->framework.mAvbMetaVersion,
                     false /* log */);
         }
-
-        if (!checkAllowedHals(*matrix)) {
-            return false;
-        }
-
         outputInputs(*matrices);
         out() << toXml(*matrix, mSerializeFlags);
         out().flush();
 
         if (checkManifest != nullptr && !checkDualFile(*checkManifest, *matrix)) {
-            return false;
-        }
-
-        return true;
-    }
-
-    // Check whether matrix only contains core HALs or not based on mCoreHalsStrategy.
-    bool checkAllowedHals(const CompatibilityMatrix& matrix) {
-        std::vector<std::string> violators;
-
-        for (const auto& hal : matrix.getHals()) {
-            switch (mCoreHalsStrategy) {
-                case CoreHalsStrategy::DEFAULT:
-                    break;
-                case CoreHalsStrategy::ONLY: {
-                    if (!details::isCoreHal(hal.name)) {
-                        violators.push_back(hal.name);
-                    }
-                } break;
-                case CoreHalsStrategy::DISALLOW: {
-                    if (details::isCoreHal(hal.name)) {
-                        violators.push_back(hal.name);
-                    }
-                } break;
-            }
-        }
-
-        if (!violators.empty()) {
-            err() << "The following HALs are disallowed because they are "
-                  << (mCoreHalsStrategy == CoreHalsStrategy::ONLY ? "not " : "") << "core HALs: ["
-                  << std::endl;
-            for (const auto& violator : violators) {
-                err() << "  " << violator << std::endl;
-            }
-            err() << "]" << std::endl;
             return false;
         }
 
@@ -894,20 +848,6 @@ class AssembleVintfImpl : public AssembleVintf {
         return it->stream();
     }
 
-    bool setCoreHalsStrategy(const std::string& strategy) override {
-        if (strategy == "only") {
-            mCoreHalsStrategy = CoreHalsStrategy::ONLY;
-        } else if (strategy == "disallow") {
-            mCoreHalsStrategy = CoreHalsStrategy::DISALLOW;
-        } else if (strategy == "default") {
-            mCoreHalsStrategy = CoreHalsStrategy::DEFAULT;
-        } else {
-            err() << "Invalid --core-hals=" << strategy << std::endl;
-            return false;
-        }
-        return true;
-    }
-
     void resetInFiles() {
         for (auto& inFile : mInFiles) {
             inFile.stream().clear();
@@ -958,9 +898,6 @@ class AssembleVintfImpl : public AssembleVintf {
     std::vector<AidlInterfaceMetadata> mFakeAidlMetadata;
     std::optional<bool> mFakeAidlUseUnfrozen;
     CheckFlags::Type mCheckFlags = CheckFlags::DEFAULT;
-
-    enum class CoreHalsStrategy { DEFAULT, ONLY, DISALLOW };
-    CoreHalsStrategy mCoreHalsStrategy = CoreHalsStrategy::DEFAULT;
 };
 
 bool AssembleVintf::openOutFile(const std::string& path) {
