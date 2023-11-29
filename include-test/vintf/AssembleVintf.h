@@ -58,7 +58,6 @@ class AssembleVintf {
     virtual void setFakeAidlMetadata(const std::vector<AidlInterfaceMetadata>& metadata) = 0;
     virtual void setFakeAidlUseUnfrozen(const std::optional<bool>& use) = 0;
     virtual void setFakeEnv(const std::string& key, const std::string& value) = 0;
-    virtual bool setCoreHalsStrategy(const std::string& allowedHal) = 0;
 
    protected:
     virtual bool hasKernelVersion(const KernelVersion&) const = 0;
