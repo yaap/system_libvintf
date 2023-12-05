@@ -707,6 +707,55 @@ TEST_F(AssembleVintfTest, ManifestLevelConflictCorrectLocation) {
     EXPECT_IN("File 'manifest_2.xml' has level 2", getError());
 }
 
+TEST_F(AssembleVintfTest, PassMultipleManifestEntrySameModule) {
+    setFakeEnvs({{"VINTF_IGNORE_TARGET_FCM_VERSION", "true"}});
+    std::vector<AidlInterfaceMetadata> aidl{
+        {.name = "android.system.foo",
+         .stability = "vintf",
+         .versions = {1, 2},
+         .types = {"android.system.foobar.IFoo", "android.system.foobar.IBar"}}};
+    setFakeAidlMetadata(aidl);
+    addInput("manifest1.xml", StringPrintf(
+                                  R"(
+                <manifest %s type="framework">
+                   <hal format="aidl">
+                        <name>android.system.foobar</name>\n"
+                        <fqname>IFoo/default</fqname>\n"
+                        <fqname>IBar/default</fqname>\n"
+                        <version>3</version>\n"
+                    </hal>
+                </manifest>)",
+                                  kMetaVersionStr.c_str()));
+    EXPECT_TRUE(getInstance()->assemble());
+}
+
+TEST_F(AssembleVintfTest, FailOnMultipleModulesInSameManifestEntry) {
+    setFakeEnvs({{"VINTF_IGNORE_TARGET_FCM_VERSION", "true"}});
+    std::vector<AidlInterfaceMetadata> aidl{{.name = "android.system.foo",
+                                             .stability = "vintf",
+                                             .versions = {1, 2},
+                                             .types = {"android.system.foobar.IFoo"}},
+                                            {.name = "android.system.bar",
+                                             .stability = "vintf",
+                                             .versions = {1, 2},
+                                             .types = {"android.system.foobar.IBar"}}};
+    setFakeAidlMetadata(aidl);
+    addInput("manifest1.xml", StringPrintf(
+                                  R"(
+                <manifest %s type="framework">
+                   <hal format="aidl">
+                        <name>android.system.foobar</name>\n"
+                        <fqname>IFoo/default</fqname>\n"
+                        <fqname>IBar/default</fqname>\n"
+                        <version>3</version>\n"
+                    </hal>
+                </manifest>)",
+                                  kMetaVersionStr.c_str()));
+    EXPECT_FALSE(getInstance()->assemble());
+    EXPECT_IN("HAL manifest entries must only contain", getError());
+    EXPECT_IN("android.system.foobar.IFoo is in android.system.foo", getError());
+}
+
 TEST_F(AssembleVintfTest, ForceDowngradeVersion) {
     setFakeEnvs({{"VINTF_IGNORE_TARGET_FCM_VERSION", "true"}});
     std::vector<AidlInterfaceMetadata> aidl{{.name = "android.system.bar",
