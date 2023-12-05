@@ -432,6 +432,32 @@ class AssembleVintfImpl : public AssembleVintf {
         return true;
     }
 
+    // get the first interface name including the package.
+    // Example: android.foo.IFoo
+    static std::string getFirstInterfaceName(const ManifestHal& manifestHal) {
+        std::string interfaceName;
+        manifestHal.forEachInstance([&](const ManifestInstance& instance) -> bool {
+            interfaceName = instance.package() + "." + instance.interface();
+            return false;
+        });
+        return interfaceName;
+    }
+
+    // Check if this HAL is covered by this metadata entry. The name field in
+    // AidlInterfaceMetadata is the module name, which isn't the same as the
+    // package that would be found in the manifest, so we check all of the types
+    // in the metadata.
+    // Implementation detail: Returns true if the interface of the first
+    // <fqname> is in `aidlMetadata.types`
+    static bool isInMetadata(const ManifestHal& manifestHal,
+                             const AidlInterfaceMetadata& aidlMetadata) {
+        // Get the first interface type. The instance isn't
+        // needed to find a matching AidlInterfaceMetadata
+        std::string interfaceName = getFirstInterfaceName(manifestHal);
+        return std::find(aidlMetadata.types.begin(), aidlMetadata.types.end(), interfaceName) !=
+               aidlMetadata.types.end();
+    }
+
     // Set the manifest version for AIDL interfaces to 'version - 1' if the HAL is
     // implementing the latest unfrozen version and the release configuration
     // prevents the use of the unfrozen version.
@@ -453,22 +479,18 @@ class AssembleVintfImpl : public AssembleVintf {
                 return false;
             }
             size_t halVersion = hal.versions.front().minorVer;
+            bool foundMetadata = false;
             for (const AidlInterfaceMetadata& metadata : aidlMetadata) {
-                if (!metadata.has_development || hal.getName() != metadata.name) continue;
+                if (!isInMetadata(hal, metadata)) continue;
+                foundMetadata = true;
+                if (!metadata.has_development) continue;
 
                 auto it = std::max_element(metadata.versions.begin(), metadata.versions.end());
                 if (it == metadata.versions.end()) {
-                    // Some HALs may not be ready for this transition
-                    static const std::set<std::string> kAllowedHals = {
-                        // TODO(b/296130317)
-                        "vendor.google.bluetooth_ext",
-                    };
                     // v1 manifest entries that are declaring unfrozen versions must be removed
                     // from the manifest when the release configuration prevents the use of
                     // unfrozen versions. this ensures service manager will deny registration.
-                    if (kAllowedHals.count(hal.getName()) == 0) {
-                        halsToRemove.push_back(hal.getName());
-                    }
+                    halsToRemove.push_back(hal.getName());
                 } else {
                     size_t latestVersion = *it;
                     if (latestVersion < halVersion) {
@@ -487,6 +509,11 @@ class AssembleVintfImpl : public AssembleVintf {
                         hal.versions[0] = hal.versions[0].withMinor(halVersion - 1);
                     }
                 }
+            }
+            if (!foundMetadata) {
+                err() << "Couldn't find AIDL metadata for: " << getFirstInterfaceName(hal)
+                      << " in file " << hal.fileName() << ". Check spelling?" << std::endl;
+                return false;
             }
         }
         for (const auto& name : halsToRemove) {
