@@ -379,6 +379,59 @@ class AssembleVintfImpl : public AssembleVintf {
         return true;
     }
 
+    // Check to see if each HAL manifest entry only contains interfaces from the
+    // same aidl_interface module by finding the AidlInterfaceMetadata object
+    // associated with the interfaces in the manifest entry.
+    bool verifyMetadataPerManifestEntry(const HalManifest& halManifest) {
+        const std::vector<AidlInterfaceMetadata> aidlMetadata = getAidlMetadata();
+        for (const auto& hal : halManifest.getHals()) {
+            for (const auto& metadata : aidlMetadata) {
+                std::map<std::string, bool> isInterfaceInMetadata;
+                // get the types of each instance
+                hal.forEachInstance([&](const ManifestInstance& instance) -> bool {
+                    std::string interfaceName = instance.package() + "." + instance.interface();
+                    // check if that instance is covered by this metadata object
+                    if (std::find(metadata.types.begin(), metadata.types.end(), interfaceName) !=
+                        metadata.types.end()) {
+                        isInterfaceInMetadata[interfaceName] = true;
+                    } else {
+                        isInterfaceInMetadata[interfaceName] = false;
+                    }
+                    // Keep going through the rest of the instances
+                    return true;
+                });
+                bool found = false;
+                if (!isInterfaceInMetadata.empty()) {
+                    // Check that all of these entries were found or not
+                    // found in this metadata entry.
+                    found = isInterfaceInMetadata.begin()->second;
+                    if (!std::all_of(
+                            isInterfaceInMetadata.begin(), isInterfaceInMetadata.end(),
+                            [&](const auto& entry) -> bool { return found == entry.second; })) {
+                        err() << "HAL manifest entries must only contain interfaces from the same "
+                                 "aidl_interface"
+                              << std::endl;
+                        for (auto& [interface, isIn] : isInterfaceInMetadata) {
+                            if (isIn) {
+                                err() << "    " << interface << " is in " << metadata.name
+                                      << std::endl;
+                            } else {
+                                err() << "    "
+                                      << interface << " is from another AIDL interface module "
+                                      << std::endl;
+                            }
+                        }
+                        return false;
+                    }
+                }
+                // If we found the AidlInterfaceMetadata associated with this
+                // HAL, then there is no need to keep looking.
+                if (found) break;
+            }
+        }
+        return true;
+    }
+
     // Set the manifest version for AIDL interfaces to 'version - 1' if the HAL is
     // implementing the latest unfrozen version and the release configuration
     // prevents the use of the unfrozen version.
@@ -520,6 +573,10 @@ class AssembleVintfImpl : public AssembleVintf {
             for (auto&& v : getEnvList("PLATFORM_SYSTEMSDK_VERSIONS")) {
                 halManifest->framework.mSystemSdk.mVersions.emplace(std::move(v));
             }
+        }
+
+        if (!verifyMetadataPerManifestEntry(*halManifest)) {
+            return false;
         }
 
         if (!setManifestAidlHalVersion(halManifest)) {
