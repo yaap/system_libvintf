@@ -382,9 +382,10 @@ class AssembleVintfImpl : public AssembleVintf {
     // Check to see if each HAL manifest entry only contains interfaces from the
     // same aidl_interface module by finding the AidlInterfaceMetadata object
     // associated with the interfaces in the manifest entry.
-    bool verifyMetadataPerManifestEntry(const HalManifest& halManifest) {
+    bool verifyAidlMetadataPerManifestEntry(const HalManifest& halManifest) {
         const std::vector<AidlInterfaceMetadata> aidlMetadata = getAidlMetadata();
         for (const auto& hal : halManifest.getHals()) {
+            if (hal.format != HalFormat::AIDL) continue;
             for (const auto& metadata : aidlMetadata) {
                 std::map<std::string, bool> isInterfaceInMetadata;
                 // get the types of each instance
@@ -575,7 +576,7 @@ class AssembleVintfImpl : public AssembleVintf {
             }
         }
 
-        if (!verifyMetadataPerManifestEntry(*halManifest)) {
+        if (!verifyAidlMetadataPerManifestEntry(*halManifest)) {
             return false;
         }
 
