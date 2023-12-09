@@ -582,6 +582,10 @@ TEST_F(AssembleVintfTest, AidlAndHidlNames) {
         "        <fqname>@1.0::IFoo/default</fqname>\n"
         "    </hal>\n"
         "</manifest>\n");
+    std::vector<AidlInterfaceMetadata> aidl{
+        {.name = "android.system.foo",
+         .types = {"android.system.foo.IFoo"}}};
+    setFakeAidlMetadata(aidl);
     EXPECT_TRUE(getInstance()->assemble());
     EXPECT_IN(
         "    <hal format=\"aidl\">\n"
@@ -758,10 +762,12 @@ TEST_F(AssembleVintfTest, FailOnMultipleModulesInSameManifestEntry) {
 
 TEST_F(AssembleVintfTest, ForceDowngradeVersion) {
     setFakeEnvs({{"VINTF_IGNORE_TARGET_FCM_VERSION", "true"}});
-    std::vector<AidlInterfaceMetadata> aidl{{.name = "android.system.bar",
-                                             .stability = "vintf",
-                                             .versions = {1, 2},
-                                             .has_development = true}};
+    std::vector<AidlInterfaceMetadata> aidl{
+        {.name = "foo_android.system.bar",
+         .stability = "vintf",
+         .types = {"android.system.bar.IFoo", "android.system.bar.MyFoo"},
+         .versions = {1, 2},
+         .has_development = true}};
     setFakeAidlMetadata(aidl);
     setFakeAidlUseUnfrozen(false);
     addInput("manifest1.xml", StringPrintf(
@@ -778,12 +784,44 @@ TEST_F(AssembleVintfTest, ForceDowngradeVersion) {
     EXPECT_IN("<version>2</version>", getOutput());
 }
 
+TEST_F(AssembleVintfTest, InfoDowngradeVersionTypo) {
+    setFakeEnvs({{"VINTF_IGNORE_TARGET_FCM_VERSION", "true"}});
+    std::vector<AidlInterfaceMetadata> aidl{
+        {.name = "foo_android.system.bar",
+         .stability = "vintf",
+         .types = {"android.system.bar.IFoo", "android.system.bar.MyFoo"},
+         .versions = {1, 2},
+         .has_development = true}};
+    setFakeAidlMetadata(aidl);
+    setFakeAidlUseUnfrozen(false);
+    addInput("manifest1.xml", StringPrintf(
+                                  R"(
+                <manifest %s type="framework">
+                   <hal format="aidl">
+                        <name>android.system.bar</name>\n"
+                        <fqname>IFooooooooo/default</fqname>\n"
+                        <version>3</version>\n"
+                    </hal>
+                </manifest>)",
+                                  kMetaVersionStr.c_str()));
+    // It doesn't fail because there may be prebuilts, but make sure we do log it.
+    EXPECT_TRUE(getInstance()->assemble());
+    EXPECT_IN(
+        "INFO: Couldn't find AIDL metadata for: android.system.bar.IFooooooooo in file "
+        "manifest1.xml. "
+        "Check "
+        "spelling?",
+        getError());
+}
+
 TEST_F(AssembleVintfTest, AllowUnfrozenVersion) {
     setFakeEnvs({{"VINTF_IGNORE_TARGET_FCM_VERSION", "true"}});
-    std::vector<AidlInterfaceMetadata> aidl{{.name = "android.system.bar",
-                                             .stability = "vintf",
-                                             .versions = {1, 2},
-                                             .has_development = true}};
+    std::vector<AidlInterfaceMetadata> aidl{
+        {.name = "foo_android.system.bar",
+         .stability = "vintf",
+         .types = {"android.system.bar.IFoo", "android.system.bar.MyFoo"},
+         .versions = {1, 2},
+         .has_development = true}};
     setFakeAidlMetadata(aidl);
     setFakeAidlUseUnfrozen(true);
     addInput("manifest1.xml", StringPrintf(
@@ -803,10 +841,12 @@ TEST_F(AssembleVintfTest, AllowUnfrozenVersion) {
 TEST_F(AssembleVintfTest, KeepFrozenVersion) {
     setFakeEnvs({{"VINTF_IGNORE_TARGET_FCM_VERSION", "true"}});
     // V3 is already frozen
-    std::vector<AidlInterfaceMetadata> aidl{{.name = "android.system.bar",
-                                             .stability = "vintf",
-                                             .versions = {1, 2, 3},
-                                             .has_development = true}};
+    std::vector<AidlInterfaceMetadata> aidl{
+        {.name = "foo_android.system.bar",
+         .stability = "vintf",
+         .types = {"android.system.bar.IFoo", "android.system.bar.MyFoo"},
+         .versions = {1, 2, 3},
+         .has_development = true}};
     setFakeAidlMetadata(aidl);
     setFakeAidlUseUnfrozen(false);
     addInput("manifest1.xml", StringPrintf(
