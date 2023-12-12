@@ -185,10 +185,6 @@ struct HalManifest : public HalGroup<ManifestHal>,
     // (instance in matrix) => (instance in manifest).
     std::vector<std::string> checkIncompatibleHals(const CompatibilityMatrix& mat) const;
 
-    // Return vector of instance names that are defined in an APEX that are not
-    // specified as updatable apex hals in the compatibility matrix.
-    std::vector<std::string> checkApexHals(const CompatibilityMatrix& mat) const;
-
     void removeHals(const std::string& name, size_t majorVer);
 
     // Returns a list of instance names that are in this manifest but

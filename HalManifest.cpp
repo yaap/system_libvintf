@@ -389,56 +389,6 @@ std::set<std::string> HalManifest::checkUnusedHals(
     return ret;
 }
 
-std::vector<std::string> HalManifest::checkApexHals(const CompatibilityMatrix& mat) const {
-    std::vector<std::string> ret;
-
-    // Validate any APEX-implemented HALs.
-    // Any HALs found within an APEX (hal.updatableViaApex()) must
-    // be declared as updatable-via-apex in the compatibility matrix (matrixHal.updatableViaApex).
-    //
-    //   hal.updatableViaApex == <any> AND matrixHal.updatableViaApex == true   # VALID
-    //   hal.updatableViaApex == <any> AND matrixHal.updatableViaApex == false  # INVALID
-    //   hal.updatableViaApex == "" (not updatable)                             # VALID
-    //
-    // Below check for INVALID case (hal.updatableViaApex == <any> && !matrixHal.updatableViaApex)
-
-    for (const auto& hal : getHals()) {
-        bool updatableViaApex =
-            hal.updatableViaApex().has_value() && !hal.updatableViaApex()->empty();
-
-        if (updatableViaApex) {
-            // Check every instance is contained in the matrix with an updatable apex attribute
-            (void)hal.forEachInstance([&mat, &ret](const auto& manifestInstance) {
-                LOG(DEBUG) << "Checking APEX HAL " << manifestInstance.description();
-                bool supported = false;
-                for (const auto& matrixHal : mat.getHals()) {
-                    if (matrixHal.updatableViaApex) {
-                        // Use false to break out of forEachInstance to indicate a matrix instance
-                        // that supports the manifest instance.
-                        supported = !matrixHal.forEachInstance([&manifestInstance](
-                                                                   const auto& matrixInstance) {
-                            if (matrixInstance.isSatisfiedBy(manifestInstance.getFqInstance())) {
-                                // break out of forEachInstance
-                                return false;
-                            }
-                            return true;
-                        });
-                        if (supported) {
-                            break;
-                        }
-                    }
-                }
-                if (!supported) {
-                    ret.push_back(manifestInstance.description());
-                }
-                // check all instances
-                return true;
-            });
-        }
-    }
-    return ret;
-}
-
 static bool checkVendorNdkCompatibility(const VendorNdk& matVendorNdk,
                                         const std::vector<VendorNdk>& manifestVendorNdk,
                                         std::string* error) {
@@ -555,17 +505,6 @@ bool HalManifest::checkCompatibility(const CompatibilityMatrix& mat, std::string
             kernel()
                 ->getMatchedKernelRequirements(mat.framework.mKernels, kernelTagLevel, error)
                 .empty()) {
-            return false;
-        }
-        // Check APEX-implemented HALs are supported in matrix
-        auto unsupportedApexHals = checkApexHals(mat);
-        if (!unsupportedApexHals.empty()) {
-            if (error != nullptr) {
-                *error = "APEX-implemented HALs not supported in compatibility matrix:\n";
-                for (auto const& n : unsupportedApexHals) {
-                    *error += "\n" + n;
-                }
-            }
             return false;
         }
     }
