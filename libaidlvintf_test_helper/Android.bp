@@ -38,4 +38,7 @@ cc_library_static {
         "libvintf",
         "libutils",
     ],
+    static_libs: [
+        "libgtest",
+    ],
 }
