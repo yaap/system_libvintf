@@ -17,9 +17,33 @@
 #include <aidl/Vintf.h>
 
 #include <android-base/logging.h>
+#include <android-base/strings.h>
+#include <gtest/gtest.h>
 #include <vintf/VintfObject.h>
 
 namespace android {
+
+static std::vector<std::string> gUnimplementedInterfaces;
+
+// b/290539746. getAidlHalInstanceNames is usually used for parameters
+// to create parameterized tests, so if it returns an empty list, then
+// oftentimes the test will report no test results. This is confusing
+// and it appears like a test error.
+//
+// Due to translation units defining other tests that will be instantiated
+// in another order, we can't instantiate a test suite based on the set
+// of unimplemented interfaces, so we can only have one test which shows
+// the result.
+TEST(AidlTestHelper, CheckNoUnimplementedInterfaces) {
+    if (gUnimplementedInterfaces.empty()) {
+        // all interfaces are implemented, so no error
+        return;
+    }
+
+    GTEST_SKIP()
+        << "These interfaces are unimplemented on this device, so other tests may be skipped: "
+        << android::base::Join(gUnimplementedInterfaces, ", ");
+}
 
 std::vector<std::string> getAidlHalInstanceNames(const std::string& descriptor) {
     size_t lastDot = descriptor.rfind('.');
@@ -42,6 +66,8 @@ std::vector<std::string> getAidlHalInstanceNames(const std::string& descriptor) 
     if (ret.size() == 0) {
         std::cerr << "WARNING: There are no instances of AIDL service '" << descriptor
                   << "' declared on this device." << std::endl;
+
+        gUnimplementedInterfaces.push_back(descriptor);
     }
 
     return ret;
