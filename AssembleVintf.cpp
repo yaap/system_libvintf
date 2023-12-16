@@ -17,7 +17,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -380,6 +379,86 @@ class AssembleVintfImpl : public AssembleVintf {
         return true;
     }
 
+    // Check to see if each HAL manifest entry only contains interfaces from the
+    // same aidl_interface module by finding the AidlInterfaceMetadata object
+    // associated with the interfaces in the manifest entry.
+    bool verifyAidlMetadataPerManifestEntry(const HalManifest& halManifest) {
+        const std::vector<AidlInterfaceMetadata> aidlMetadata = getAidlMetadata();
+        for (const auto& hal : halManifest.getHals()) {
+            if (hal.format != HalFormat::AIDL) continue;
+            for (const auto& metadata : aidlMetadata) {
+                std::map<std::string, bool> isInterfaceInMetadata;
+                // get the types of each instance
+                hal.forEachInstance([&](const ManifestInstance& instance) -> bool {
+                    std::string interfaceName = instance.package() + "." + instance.interface();
+                    // check if that instance is covered by this metadata object
+                    if (std::find(metadata.types.begin(), metadata.types.end(), interfaceName) !=
+                        metadata.types.end()) {
+                        isInterfaceInMetadata[interfaceName] = true;
+                    } else {
+                        isInterfaceInMetadata[interfaceName] = false;
+                    }
+                    // Keep going through the rest of the instances
+                    return true;
+                });
+                bool found = false;
+                if (!isInterfaceInMetadata.empty()) {
+                    // Check that all of these entries were found or not
+                    // found in this metadata entry.
+                    found = isInterfaceInMetadata.begin()->second;
+                    if (!std::all_of(
+                            isInterfaceInMetadata.begin(), isInterfaceInMetadata.end(),
+                            [&](const auto& entry) -> bool { return found == entry.second; })) {
+                        err() << "HAL manifest entries must only contain interfaces from the same "
+                                 "aidl_interface"
+                              << std::endl;
+                        for (auto& [interface, isIn] : isInterfaceInMetadata) {
+                            if (isIn) {
+                                err() << "    " << interface << " is in " << metadata.name
+                                      << std::endl;
+                            } else {
+                                err() << "    "
+                                      << interface << " is from another AIDL interface module "
+                                      << std::endl;
+                            }
+                        }
+                        return false;
+                    }
+                }
+                // If we found the AidlInterfaceMetadata associated with this
+                // HAL, then there is no need to keep looking.
+                if (found) break;
+            }
+        }
+        return true;
+    }
+
+    // get the first interface name including the package.
+    // Example: android.foo.IFoo
+    static std::string getFirstInterfaceName(const ManifestHal& manifestHal) {
+        std::string interfaceName;
+        manifestHal.forEachInstance([&](const ManifestInstance& instance) -> bool {
+            interfaceName = instance.package() + "." + instance.interface();
+            return false;
+        });
+        return interfaceName;
+    }
+
+    // Check if this HAL is covered by this metadata entry. The name field in
+    // AidlInterfaceMetadata is the module name, which isn't the same as the
+    // package that would be found in the manifest, so we check all of the types
+    // in the metadata.
+    // Implementation detail: Returns true if the interface of the first
+    // <fqname> is in `aidlMetadata.types`
+    static bool isInMetadata(const ManifestHal& manifestHal,
+                             const AidlInterfaceMetadata& aidlMetadata) {
+        // Get the first interface type. The instance isn't
+        // needed to find a matching AidlInterfaceMetadata
+        std::string interfaceName = getFirstInterfaceName(manifestHal);
+        return std::find(aidlMetadata.types.begin(), aidlMetadata.types.end(), interfaceName) !=
+               aidlMetadata.types.end();
+    }
+
     // Set the manifest version for AIDL interfaces to 'version - 1' if the HAL is
     // implementing the latest unfrozen version and the release configuration
     // prevents the use of the unfrozen version.
@@ -401,22 +480,18 @@ class AssembleVintfImpl : public AssembleVintf {
                 return false;
             }
             size_t halVersion = hal.versions.front().minorVer;
+            bool foundMetadata = false;
             for (const AidlInterfaceMetadata& metadata : aidlMetadata) {
-                if (!metadata.has_development || hal.getName() != metadata.name) continue;
+                if (!isInMetadata(hal, metadata)) continue;
+                foundMetadata = true;
+                if (!metadata.has_development) continue;
 
                 auto it = std::max_element(metadata.versions.begin(), metadata.versions.end());
                 if (it == metadata.versions.end()) {
-                    // Some HALs may not be ready for this transition
-                    static const std::set<std::string> kAllowedHals = {
-                        // TODO(b/296130317)
-                        "vendor.google.bluetooth_ext",
-                    };
                     // v1 manifest entries that are declaring unfrozen versions must be removed
                     // from the manifest when the release configuration prevents the use of
                     // unfrozen versions. this ensures service manager will deny registration.
-                    if (kAllowedHals.count(hal.getName()) == 0) {
-                        halsToRemove.push_back(hal.getName());
-                    }
+                    halsToRemove.push_back(hal.getName());
                 } else {
                     size_t latestVersion = *it;
                     if (latestVersion < halVersion) {
@@ -435,6 +510,14 @@ class AssembleVintfImpl : public AssembleVintf {
                         hal.versions[0] = hal.versions[0].withMinor(halVersion - 1);
                     }
                 }
+            }
+            if (!foundMetadata) {
+                // This can happen for prebuilt interfaces from partners that we
+                // don't know about. We can ignore them here since the AIDL tool
+                // is not going to build the libraries differently anyways.
+                err() << "INFO: Couldn't find AIDL metadata for: " << getFirstInterfaceName(hal)
+                      << " in file " << hal.fileName() << ". Check spelling? This is expected"
+                      << " for prebuilt interfaces." << std::endl;
             }
         }
         for (const auto& name : halsToRemove) {
@@ -463,11 +546,6 @@ class AssembleVintfImpl : public AssembleVintf {
     }
 
     bool assembleHalManifest(HalManifests* halManifests) {
-        if (mCoreHalsStrategy != CoreHalsStrategy::DEFAULT) {
-            err() << "--core-hals must not be set when assembling HAL manifests." << std::endl;
-            return false;
-        }
-
         std::string error;
         HalManifest* halManifest = &halManifests->front();
         HalManifest* manifestWithLevel = nullptr;
@@ -526,6 +604,10 @@ class AssembleVintfImpl : public AssembleVintf {
             for (auto&& v : getEnvList("PLATFORM_SYSTEMSDK_VERSIONS")) {
                 halManifest->framework.mSystemSdk.mVersions.emplace(std::move(v));
             }
+        }
+
+        if (!verifyAidlMetadataPerManifestEntry(*halManifest)) {
+            return false;
         }
 
         if (!setManifestAidlHalVersion(halManifest)) {
@@ -747,51 +829,11 @@ class AssembleVintfImpl : public AssembleVintf {
             getFlag("FRAMEWORK_VBMETA_VERSION_OVERRIDE", &matrix->framework.mAvbMetaVersion,
                     false /* log */);
         }
-
-        if (!checkAllowedHals(*matrix)) {
-            return false;
-        }
-
         outputInputs(*matrices);
         out() << toXml(*matrix, mSerializeFlags);
         out().flush();
 
         if (checkManifest != nullptr && !checkDualFile(*checkManifest, *matrix)) {
-            return false;
-        }
-
-        return true;
-    }
-
-    // Check whether matrix only contains core HALs or not based on mCoreHalsStrategy.
-    bool checkAllowedHals(const CompatibilityMatrix& matrix) {
-        std::vector<std::string> violators;
-
-        for (const auto& hal : matrix.getHals()) {
-            switch (mCoreHalsStrategy) {
-                case CoreHalsStrategy::DEFAULT:
-                    break;
-                case CoreHalsStrategy::ONLY: {
-                    if (!details::isCoreHal(hal.name)) {
-                        violators.push_back(hal.name);
-                    }
-                } break;
-                case CoreHalsStrategy::DISALLOW: {
-                    if (details::isCoreHal(hal.name)) {
-                        violators.push_back(hal.name);
-                    }
-                } break;
-            }
-        }
-
-        if (!violators.empty()) {
-            err() << "The following HALs are disallowed because they are "
-                  << (mCoreHalsStrategy == CoreHalsStrategy::ONLY ? "not " : "") << "core HALs: ["
-                  << std::endl;
-            for (const auto& violator : violators) {
-                err() << "  " << violator << std::endl;
-            }
-            err() << "]" << std::endl;
             return false;
         }
 
@@ -894,20 +936,6 @@ class AssembleVintfImpl : public AssembleVintf {
         return it->stream();
     }
 
-    bool setCoreHalsStrategy(const std::string& strategy) override {
-        if (strategy == "only") {
-            mCoreHalsStrategy = CoreHalsStrategy::ONLY;
-        } else if (strategy == "disallow") {
-            mCoreHalsStrategy = CoreHalsStrategy::DISALLOW;
-        } else if (strategy == "default") {
-            mCoreHalsStrategy = CoreHalsStrategy::DEFAULT;
-        } else {
-            err() << "Invalid --core-hals=" << strategy << std::endl;
-            return false;
-        }
-        return true;
-    }
-
     void resetInFiles() {
         for (auto& inFile : mInFiles) {
             inFile.stream().clear();
@@ -958,9 +986,6 @@ class AssembleVintfImpl : public AssembleVintf {
     std::vector<AidlInterfaceMetadata> mFakeAidlMetadata;
     std::optional<bool> mFakeAidlUseUnfrozen;
     CheckFlags::Type mCheckFlags = CheckFlags::DEFAULT;
-
-    enum class CoreHalsStrategy { DEFAULT, ONLY, DISALLOW };
-    CoreHalsStrategy mCoreHalsStrategy = CoreHalsStrategy::DEFAULT;
 };
 
 bool AssembleVintf::openOutFile(const std::string& path) {

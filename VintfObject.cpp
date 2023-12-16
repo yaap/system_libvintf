@@ -96,6 +96,7 @@ static bool isAllowedToUseLibvintf() {
     std::vector<std::string> allowedBinaries{
         "/system/bin/servicemanager",
         "/system/bin/hwservicemanager",
+        "/system_ext/bin/hwservicemanager",
         // Java: boot time VINTF check
         "/system/bin/app_process32",
         "/system/bin/app_process64",
