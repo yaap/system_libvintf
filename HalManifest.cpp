@@ -293,6 +293,20 @@ bool HalManifest::forEachInstanceOfVersion(
     return true;
 }
 
+bool HalManifest::forEachNativeInstance(
+    const std::string& package, const std::function<bool(const ManifestInstance&)>& func) const {
+    for (const ManifestHal* hal : getHals(package)) {
+        bool cont = hal->forEachInstance([&](const ManifestInstance& manifestInstance) {
+            if (manifestInstance.format() == HalFormat::NATIVE) {
+                return func(manifestInstance);
+            }
+            return true;
+        });
+        if (!cont) return false;
+    }
+    return true;
+}
+
 // indent = 2, {"foo"} => "foo"
 // indent = 2, {"foo", "bar"} => "\n  foo\n  bar";
 template <typename Container>
@@ -653,6 +667,15 @@ std::set<std::string> HalManifest::getAidlInstances(const std::string& package, 
                         interfaceName);
 }
 
+std::set<std::string> HalManifest::getNativeInstances(const std::string& package) const {
+    std::set<std::string> instances;
+    forEachNativeInstance(package, [&](const auto& inst) {
+        instances.insert(inst.instance());
+        return true;
+    });
+    return instances;
+}
+
 bool HalManifest::hasHidlInstance(const std::string& package, const Version& version,
                                   const std::string& interfaceName,
                                   const std::string& instance) const {
@@ -668,6 +691,15 @@ bool HalManifest::hasAidlInstance(const std::string& package, size_t version,
                                   const std::string& interface, const std::string& instance) const {
     return hasInstance(HalFormat::AIDL, package, {details::kFakeAidlMajorVersion, version},
                        interface, instance);
+}
+
+bool HalManifest::hasNativeInstance(const std::string& package, const std::string& instance) const {
+    bool found = false;
+    forEachNativeInstance(package, [&](const auto& inst) {
+        found |= inst.instance() == instance;
+        return !found;  // continue if not found
+    });
+    return found;
 }
 
 bool HalManifest::insertInstance(const FqInstance& fqInstance, Transport transport, Arch arch,
