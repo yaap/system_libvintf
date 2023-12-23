@@ -800,6 +800,11 @@ class AssembleVintfImpl : public AssembleVintf {
             auto currentSepolicyVersionString = getEnv("PLATFORM_SEPOLICY_VERSION");
             if (!currentSepolicyVersionString.empty()) {
                 sepolicyVersionStrings.push_back(currentSepolicyVersionString);
+                // HACK to support pre-vFRC vendor blobs
+                // TODO(b/314010177): remove after new ToT (1000000.0) fully propagates
+                if (currentSepolicyVersionString == "1000000.0") {
+                    sepolicyVersionStrings.push_back("10000.0");
+                }
             }
             for (auto&& s : sepolicyVersionStrings) {
                 Version v;
