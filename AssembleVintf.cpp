@@ -485,6 +485,13 @@ class AssembleVintfImpl : public AssembleVintf {
                 if (!isInMetadata(hal, metadata)) continue;
                 foundMetadata = true;
                 if (!metadata.has_development) continue;
+                if (metadata.use_unfrozen) {
+                    err() << "INFO: " << hal.getName()
+                          << " is explicitly marked to use unfrozen version, so it will not be "
+                             "downgraded. If this interface is used, it will fail "
+                             "vts_treble_vintf_vendor_test.";
+                    continue;
+                }
 
                 auto it = std::max_element(metadata.versions.begin(), metadata.versions.end());
                 if (it == metadata.versions.end()) {
