@@ -212,14 +212,6 @@ status_t VintfObject::getCombinedFrameworkMatrix(
         deviceLevel = deviceManifest->level();
     }
 
-    // TODO(b/70628538): Do not infer from Shipping API level.
-    if (deviceLevel == Level::UNSPECIFIED) {
-        auto shippingApi = getPropertyFetcher()->getUintProperty("ro.product.first_api_level", 0u);
-        if (shippingApi != 0u) {
-            deviceLevel = details::convertFromApiLevel(shippingApi);
-        }
-    }
-
     if (deviceLevel == Level::UNSPECIFIED) {
         // Cannot infer FCM version. Combine all matrices by assuming
         // Shipping FCM Version == min(all supported FCM Versions in the framework)

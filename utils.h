@@ -56,19 +56,6 @@ status_t fetchAllInformation(const FileSystem* fileSystem, const std::string& pa
     return OK;
 }
 
-// TODO(b/70628538): Do not infer from Shipping API level.
-inline Level convertFromApiLevel(size_t apiLevel) {
-    if (apiLevel < 26) {
-        return Level::LEGACY;
-    } else if (apiLevel == 26) {
-        return Level::O;
-    } else if (apiLevel == 27) {
-        return Level::O_MR1;
-    } else {
-        return Level::UNSPECIFIED;
-    }
-}
-
 class PropertyFetcherImpl : public PropertyFetcher {
    public:
     virtual std::string getProperty(const std::string& key,
