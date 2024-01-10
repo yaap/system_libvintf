@@ -394,6 +394,8 @@ static bool checkVendorNdkCompatibility(const VendorNdk& matVendorNdk,
                                         std::string* error) {
     // For pre-P vendor images, device compatibility matrix does not specify <vendor-ndk>
     // tag. Ignore the check for these devices.
+    // VNDK is no longer a dependency for vendor version 35 and beyond. On these images,
+    // <vendor-ndk> is also empty.
     if (matVendorNdk.version().empty()) {
         return true;
     }
