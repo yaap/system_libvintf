@@ -46,6 +46,7 @@ class VintfObject;
 namespace details {
 class CheckVintfUtils;
 class FmOnlyVintfObject;
+class VintfObjectBuilder;
 
 template <typename T>
 struct LockedSharedPtr {
@@ -58,34 +59,6 @@ struct LockedRuntimeInfoCache {
     std::shared_ptr<RuntimeInfo> object;
     std::mutex mutex;
     RuntimeInfo::FetchFlags fetchedFlags = RuntimeInfo::FetchFlag::NONE;
-};
-
-/**
- * DO NOT USE outside of libvintf. This is an implementation detail. Use VintfObject::Builder
- * instead.
- *
- * A builder of VintfObject. If a dependency is not specified, the default behavior is used.
- * - FileSystem fetch from "/" for target and fetch no files for host
- * - ObjectFactory<RuntimeInfo> fetches default RuntimeInfo for target and nothing for host
- * - PropertyFetcher fetches properties for target and nothing for host
- */
-class VintfObjectBuilder {
-   public:
-    VintfObjectBuilder(std::unique_ptr<VintfObject>&& object) : mObject(std::move(object)) {}
-    ~VintfObjectBuilder();
-    VintfObjectBuilder& setFileSystem(std::unique_ptr<FileSystem>&&);
-    VintfObjectBuilder& setRuntimeInfoFactory(std::unique_ptr<ObjectFactory<RuntimeInfo>>&&);
-    VintfObjectBuilder& setPropertyFetcher(std::unique_ptr<PropertyFetcher>&&);
-    VintfObjectBuilder& setApex(std::unique_ptr<ApexInterface>&&);
-    template <typename VintfObjectType = VintfObject>
-    std::unique_ptr<VintfObjectType> build() {
-        return std::unique_ptr<VintfObjectType>(
-            static_cast<VintfObjectType*>(buildInternal().release()));
-    }
-
-   private:
-    std::unique_ptr<VintfObject> buildInternal();
-    std::unique_ptr<VintfObject> mObject;
 };
 
 }  // namespace details
@@ -374,11 +347,7 @@ class VintfObject {
         const std::shared_ptr<const HalManifest>& halManifest);
 
    public:
-    /** Builder of VintfObject. See VintfObjectBuilder for details. */
-    class Builder : public details::VintfObjectBuilder {
-       public:
-        Builder();
-    };
+    class Builder;
 
    protected:
     /* Empty VintfObject without any dependencies. Used by Builder and subclasses. */
@@ -396,6 +365,34 @@ enum : int32_t {
 // exposed for testing.
 namespace details {
 
+/**
+ * DO NOT USE outside of libvintf. This is an implementation detail. Use VintfObject::Builder
+ * instead.
+ *
+ * A builder of VintfObject. If a dependency is not specified, the default behavior is used.
+ * - FileSystem fetch from "/" for target and fetch no files for host
+ * - ObjectFactory<RuntimeInfo> fetches default RuntimeInfo for target and nothing for host
+ * - PropertyFetcher fetches properties for target and nothing for host
+ */
+class VintfObjectBuilder {
+   public:
+    VintfObjectBuilder(std::unique_ptr<VintfObject>&& object) : mObject(std::move(object)) {}
+    ~VintfObjectBuilder();
+    VintfObjectBuilder& setFileSystem(std::unique_ptr<FileSystem>&&);
+    VintfObjectBuilder& setRuntimeInfoFactory(std::unique_ptr<ObjectFactory<RuntimeInfo>>&&);
+    VintfObjectBuilder& setPropertyFetcher(std::unique_ptr<PropertyFetcher>&&);
+    VintfObjectBuilder& setApex(std::unique_ptr<ApexInterface>&&);
+    template <typename VintfObjectType = VintfObject>
+    std::unique_ptr<VintfObjectType> build() {
+        return std::unique_ptr<VintfObjectType>(
+            static_cast<VintfObjectType*>(buildInternal().release()));
+    }
+
+   private:
+    std::unique_ptr<VintfObject> buildInternal();
+    std::unique_ptr<VintfObject> mObject;
+};
+
 // Convenience function to dump all files and directories that could be read
 // by calling Get(Framework|Device)(HalManifest|CompatibilityMatrix). The list
 // include files that may not actually be read when the four functions are called
@@ -407,6 +404,12 @@ namespace details {
 std::vector<std::string> dumpFileList(const std::string& sku);
 
 }  // namespace details
+
+/** Builder of VintfObject. See VintfObjectBuilder for details. */
+class VintfObject::Builder : public details::VintfObjectBuilder {
+   public:
+    Builder();
+};
 
 }  // namespace vintf
 }  // namespace android
