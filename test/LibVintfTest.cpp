@@ -5393,6 +5393,14 @@ TEST_F(LibVintfTest, RuntimeInfoParseGkiKernelReleaseLevelInconsistent) {
                                     "5.4.42-android12-0-something", nullptr, &level));
 }
 
+// We bump level numbers for V, so check for consistency
+TEST_F(LibVintfTest, RuntimeInfoGkiReleaseV) {
+    Level level = Level::UNSPECIFIED;
+    EXPECT_EQ(OK, parseGkiKernelRelease(RuntimeInfo::FetchFlag::KERNEL_FCM, "6.1.0-android15-0",
+                                        nullptr, &level));
+    EXPECT_EQ(Level::V, level);
+}
+
 class ManifestMissingITest : public LibVintfTest,
                              public ::testing::WithParamInterface<std::string> {
    public:
