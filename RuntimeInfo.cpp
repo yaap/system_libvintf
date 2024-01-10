@@ -185,12 +185,29 @@ status_t RuntimeInfo::parseGkiKernelRelease(RuntimeInfo::FetchFlags flags,
 
 Level RuntimeInfo::gkiAndroidReleaseToLevel(uint64_t androidRelease) {
     constexpr size_t ANDROID_S = 12;
+    constexpr size_t ANDROID_V = 15;
 
     // Values prior to Android 12 is ignored because GKI kernel release format starts
     // at Android 12.
     if (androidRelease < ANDROID_S) return Level::UNSPECIFIED;
 
-    Level ret = static_cast<Level>(androidRelease - ANDROID_S + static_cast<size_t>(Level::S));
+    Level ret = Level::UNSPECIFIED;
+    if (androidRelease < ANDROID_V) {
+        ret = static_cast<Level>(androidRelease - ANDROID_S + static_cast<size_t>(Level::S));
+    } else {
+        switch (androidRelease) {
+            case 15: {
+                ret = Level::V;
+            } break;
+            // Add more levels above this line.
+            default: {
+                LOG(FATAL) << "Convert Android " << androidRelease << " to level '" << ret
+                           << "' goes out of bounds. Fix by editing "
+                           << "RuntimeInfo::gkiAndroidReleaseToLevel";
+            } break;
+        }
+    }
+
     CHECK(ret < Level::LAST_PLUS_ONE)
         << "Convert Android " << androidRelease << " to level '" << ret
         << "' goes out of bounds. Fix by adding a new Level enum.";
