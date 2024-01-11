@@ -2411,7 +2411,7 @@ TEST_F(LibVintfTest, MatrixLevel) {
 
     xml = "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\"/>";
     EXPECT_TRUE(fromXml(&cm, xml, &error)) << error;
-    EXPECT_EQ(1u, cm.level());
+    EXPECT_EQ(Level{1}, cm.level());
 }
 
 TEST_F(LibVintfTest, ManifestLevel) {
@@ -2429,7 +2429,7 @@ TEST_F(LibVintfTest, ManifestLevel) {
 
     xml = "<manifest " + kMetaVersionStr + " type=\"device\" target-level=\"1\"/>";
     EXPECT_TRUE(fromXml(&manifest, xml, &error)) << error;
-    EXPECT_EQ(1u, manifest.level());
+    EXPECT_EQ(Level{1}, manifest.level());
 }
 
 TEST_F(LibVintfTest, AddOptionalHal) {

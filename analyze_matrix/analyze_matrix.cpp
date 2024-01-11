@@ -93,7 +93,7 @@ std::string GetDescription(Level level) {
         case Level::UNSPECIFIED:
             return "Level unspecified";
         default:
-            return "Level " + std::to_string(level);
+            return "Level " + to_string(level);
     }
 }
 
