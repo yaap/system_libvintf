@@ -1632,7 +1632,7 @@ class MultiMatrixTest : public VintfObjectTestBase {
         useEmptyFileSystem();
     }
     static std::string getFileName(size_t i) {
-        return "compatibility_matrix." + std::to_string(static_cast<Level>(i)) + ".xml";
+        return "compatibility_matrix." + to_string(static_cast<Level>(i)) + ".xml";
     }
     void SetUpMockSystemMatrices(const std::vector<std::string>& xmls) {
         SetUpMockMatrices(kSystemVintfDir, xmls);
@@ -1977,7 +1977,7 @@ TEST_F(KernelTest, Compatible) {
         "        <sepolicy-version>0.0</sepolicy-version>\n"
         "    </sepolicy>\n"
         "</compatibility-matrix>\n"});
-    expectKernelFcmVersion(Level{1}, Level{1});
+    expectKernelFcmVersion(1, Level{1});
     expectSystemManifest();
     expectVendorMatrix();
 
@@ -2005,7 +2005,7 @@ TEST_P(KernelTestP, Test) {
     auto&& [matrices, info, targetFcm, kernelFcm, pass] = GetParam();
 
     SetUpMockSystemMatrices(matrices);
-    expectKernelFcmVersion(targetFcm, kernelFcm);
+    expectKernelFcmVersion(static_cast<size_t>(targetFcm), kernelFcm);
     runtimeInfoFactory().getInfo()->setNextFetchKernelInfo(info.version(), info.configs());
     auto matrix = vintfObject->getFrameworkCompatibilityMatrix();
     auto runtime = vintfObject->getRuntimeInfo();

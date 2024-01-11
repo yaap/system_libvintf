@@ -29,9 +29,7 @@ namespace vintf {
 // manifest / matrix.
 // - For manifest, the FCM Version that it implements
 // - For matrix, the single FCM Version that this matrix file details.
-// This is not a strong-typed enum for legacy reasons. Listed are some
-// special values.
-enum Level : size_t {
+enum class Level : size_t {
     // LINT.IfChange
     // Non-Treble devices.
     LEGACY = 0,
