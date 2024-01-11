@@ -636,7 +636,7 @@ TEST_F(AssembleVintfTest, NoAutoSetKernelFcmWithConfig) {
 TEST_F(AssembleVintfTest, NoKernelFcmT) {
     addInput("manifest.xml",
         StringPrintf(R"(<manifest %s type="device" target-level="%s">
-                            <kernel target-level="10"/>
+                            <kernel target-level="8"/>
                         </manifest>)", kMetaVersionStr.c_str(),
                         to_string(details::kEnforceDeviceManifestNoKernelLevel).c_str()));
     EXPECT_FALSE(getInstance()->assemble());

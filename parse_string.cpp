@@ -131,6 +131,9 @@ bool parse(const std::string& s, Level* l) {
         return false;
     }
     *l = static_cast<Level>(value);
+    if (!IsValid(*l)) {
+        return false;
+    }
     return true;
 }
 
