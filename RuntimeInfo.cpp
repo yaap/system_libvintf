@@ -208,7 +208,7 @@ Level RuntimeInfo::gkiAndroidReleaseToLevel(uint64_t androidRelease) {
         }
     }
 
-    CHECK(ret < Level::LAST_PLUS_ONE)
+    CHECK(IsValid(ret) && ret != Level::UNSPECIFIED)
         << "Convert Android " << androidRelease << " to level '" << ret
         << "' goes out of bounds. Fix by adding a new Level enum.";
     return ret;
