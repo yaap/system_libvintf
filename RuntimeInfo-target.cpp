@@ -21,7 +21,6 @@
 #include "RuntimeInfo.h"
 
 #include "CompatibilityMatrix.h"
-#include "KernelConfigParser.h"
 #include "parse_string.h"
 
 #include <dirent.h>
@@ -35,10 +34,8 @@
 
 #include <android-base/properties.h>
 #include <selinux/selinux.h>
-#include <zlib.h>
 
-#define PROC_CONFIG "/proc/config.gz"
-#define BUFFER_SIZE sysconf(_SC_PAGESIZE)
+#include "KernelConfigs.h"
 
 namespace android {
 namespace vintf {
@@ -54,34 +51,12 @@ struct RuntimeInfoFetcher {
     status_t fetchKernelSepolicyVers(RuntimeInfo::FetchFlags flags);
     status_t fetchAvb(RuntimeInfo::FetchFlags flags);
     status_t parseKernelVersion();
-    RuntimeInfo *mRuntimeInfo;
-    KernelConfigParser mConfigParser;
+    RuntimeInfo* mRuntimeInfo;
 };
 
 // decompress /proc/config.gz and read its contents.
 status_t RuntimeInfoFetcher::fetchKernelConfigs(RuntimeInfo::FetchFlags) {
-    gzFile f = gzopen(PROC_CONFIG, "rb");
-    if (f == NULL) {
-        LOG(ERROR) << "Could not open /proc/config.gz: " << errno;
-        return -errno;
-    }
-
-    char buf[BUFFER_SIZE];
-    int len;
-    while ((len = gzread(f, buf, sizeof buf)) > 0) {
-        mConfigParser.process(buf, len);
-    }
-    status_t err = OK;
-    if (len < 0) {
-        int errnum;
-        const char *errmsg = gzerror(f, &errnum);
-        LOG(ERROR) << "Could not read /proc/config.gz: " << errmsg;
-        err = (errnum == Z_ERRNO ? -errno : errnum);
-    }
-    mConfigParser.finish();
-    gzclose(f);
-    mRuntimeInfo->mKernel.mConfigs = std::move(mConfigParser.configs());
-    return err;
+    return kernelconfigs::LoadKernelConfigs(&mRuntimeInfo->mKernel.mConfigs);
 }
 
 status_t RuntimeInfoFetcher::fetchCpuInfo(RuntimeInfo::FetchFlags) {

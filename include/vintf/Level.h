@@ -19,6 +19,8 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <array>
+#include <string>
 
 namespace android {
 namespace vintf {
@@ -27,9 +29,7 @@ namespace vintf {
 // manifest / matrix.
 // - For manifest, the FCM Version that it implements
 // - For matrix, the single FCM Version that this matrix file details.
-// This is not a strong-typed enum because Level can be any integer value. Listed are some
-// special values.
-enum Level : size_t {
+enum class Level : size_t {
     // LINT.IfChange
     // Non-Treble devices.
     LEGACY = 0,
@@ -43,17 +43,37 @@ enum Level : size_t {
     T = 7,
     U = 8,
     V = 9,
-    // To add new values: (1) add above this line.  (2) edit if needed:
+    // To add new values:
+    // (1) add above this line.
+    // (2) edit array below
+    // (3) edit:
     // - RuntimeInfo::gkiAndroidReleaseToLevel
     // - analyze_matrix.cpp, GetDescription()
     // LINT.ThenChange(/analyze_matrix/analyze_matrix.cpp)
 
-    // The maximum of all specified Levels + 1.
-    LAST_PLUS_ONE,
-
     // For older manifests and compatibility matrices, "level" is not specified.
     UNSPECIFIED = SIZE_MAX,
 };
+
+inline bool IsValid(Level level) {
+    constexpr std::array kValidLevels = {
+        // clang-format off
+        Level::LEGACY,
+        Level::O,
+        Level::O_MR1,
+        Level::P,
+        Level::Q,
+        Level::R,
+        Level::S,
+        Level::T,
+        Level::U,
+        Level::V,
+        Level::UNSPECIFIED,
+        // clang-format on
+    };
+
+    return std::find(kValidLevels.begin(), kValidLevels.end(), level) != kValidLevels.end();
+}
 
 std::string GetDescription(Level level);
 

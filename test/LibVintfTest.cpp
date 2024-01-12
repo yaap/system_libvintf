@@ -2411,7 +2411,7 @@ TEST_F(LibVintfTest, MatrixLevel) {
 
     xml = "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\"/>";
     EXPECT_TRUE(fromXml(&cm, xml, &error)) << error;
-    EXPECT_EQ(1u, cm.level());
+    EXPECT_EQ(Level{1}, cm.level());
 }
 
 TEST_F(LibVintfTest, ManifestLevel) {
@@ -2429,7 +2429,7 @@ TEST_F(LibVintfTest, ManifestLevel) {
 
     xml = "<manifest " + kMetaVersionStr + " type=\"device\" target-level=\"1\"/>";
     EXPECT_TRUE(fromXml(&manifest, xml, &error)) << error;
-    EXPECT_EQ(1u, manifest.level());
+    EXPECT_EQ(Level{1}, manifest.level());
 }
 
 TEST_F(LibVintfTest, AddOptionalHal) {
@@ -3781,7 +3781,7 @@ TEST_F(LibVintfTest, MatrixDetailErrorMsg) {
 
     HalManifest manifest;
     xml =
-        "<manifest " + kMetaVersionStr + " type=\"device\" target-level=\"103\">\n"
+        "<manifest " + kMetaVersionStr + " type=\"device\" target-level=\"8\">\n"
         "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <transport>hwbinder</transport>\n"
@@ -3797,7 +3797,7 @@ TEST_F(LibVintfTest, MatrixDetailErrorMsg) {
     {
         CompatibilityMatrix cm;
         xml =
-            "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"100\">\n"
+            "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"7\">\n"
             "    <hal format=\"hidl\" optional=\"false\">\n"
             "        <name>android.hardware.foo</name>\n"
             "        <version>1.2-3</version>\n"
@@ -3815,8 +3815,8 @@ TEST_F(LibVintfTest, MatrixDetailErrorMsg) {
             "</compatibility-matrix>\n";
         EXPECT_TRUE(fromXml(&cm, xml, &error)) << error;
         EXPECT_FALSE(manifest.checkCompatibility(cm, &error));
-        EXPECT_IN("Manifest level = 103", error);
-        EXPECT_IN("Matrix level = 100", error);
+        EXPECT_IN("Manifest level = 8", error);
+        EXPECT_IN("Matrix level = 7", error);
         EXPECT_IN(
             "android.hardware.foo:\n"
             "    required: \n"
@@ -5391,6 +5391,14 @@ TEST_F(LibVintfTest, RuntimeInfoParseGkiKernelReleaseLevelInconsistent) {
     EXPECT_EQ(UNKNOWN_ERROR,
               parseGkiKernelRelease(RuntimeInfo::FetchFlag::KERNEL_FCM,
                                     "5.4.42-android12-0-something", nullptr, &level));
+}
+
+// We bump level numbers for V, so check for consistency
+TEST_F(LibVintfTest, RuntimeInfoGkiReleaseV) {
+    Level level = Level::UNSPECIFIED;
+    EXPECT_EQ(OK, parseGkiKernelRelease(RuntimeInfo::FetchFlag::KERNEL_FCM, "6.1.0-android15-0",
+                                        nullptr, &level));
+    EXPECT_EQ(Level::V, level);
 }
 
 class ManifestMissingITest : public LibVintfTest,
