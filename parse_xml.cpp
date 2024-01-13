@@ -647,7 +647,7 @@ struct MatrixHalConverter : public XmlNodeConverter<MatrixHal> {
                      const BuildObjectParam& param) const override {
         std::vector<HalInterface> interfaces;
         if (!parseOptionalAttr(root, "format", HalFormat::HIDL, &object->format, param.error) ||
-            !parseOptionalAttr(root, "optional", false /* defaultValue */, &object->optional,
+            !parseOptionalAttr(root, "optional", true /* defaultValue */, &object->optional,
                                param.error) ||
             !parseOptionalAttr(root, "updatable-via-apex", false /* defaultValue */,
                                &object->updatableViaApex, param.error) ||
