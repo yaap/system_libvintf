@@ -19,6 +19,7 @@
 #define ANDROID_VINTF_VERSION_H
 
 #include <stdint.h>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -66,6 +67,23 @@ struct Version {
     }
 
     inline Version withMinor(size_t mi) { return Version(majorVer, mi); }
+};
+
+struct SepolicyVersion {
+    constexpr SepolicyVersion() : SepolicyVersion(0u, std::nullopt) {}
+    constexpr SepolicyVersion(size_t mj, std::optional<size_t> mi) : majorVer(mj), minorVer(mi) {}
+
+    size_t majorVer;
+    std::optional<size_t> minorVer;
+
+    bool operator==(const SepolicyVersion& other) const = default;
+    bool operator!=(const SepolicyVersion& other) const = default;
+    inline bool operator<(const SepolicyVersion& other) const {
+        return std::pair(majorVer, minorVer) < std::pair(other.majorVer, other.minorVer);
+    }
+    inline bool operator>(const SepolicyVersion& other) const { return other < *this; }
+    inline bool operator<=(const SepolicyVersion& other) const { return !((*this) > other); }
+    inline bool operator>=(const SepolicyVersion& other) const { return !((*this) < other); }
 };
 
 struct KernelVersion {
