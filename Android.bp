@@ -74,7 +74,6 @@ cc_library {
         "HalManifest.cpp",
         "HalInterface.cpp",
         "KernelConfigTypedValue.cpp",
-        "KernelConfigParser.cpp",
         "KernelInfo.cpp",
         "RuntimeInfo.cpp",
         "ManifestHal.cpp",
@@ -103,6 +102,7 @@ cc_library {
     ],
     whole_static_libs: [
         "libkver",
+        "libkernelconfigs",
     ],
     export_include_dirs: [
         "include",
@@ -258,5 +258,29 @@ cc_binary_host {
     ],
     srcs: [
         "VintfFmMain.cpp",
+    ],
+}
+
+cc_library_static {
+    name: "libkernelconfigs",
+    defaults: ["libvintf-defaults"],
+    host_supported: true,
+    recovery_available: true,
+    srcs: [
+        "KernelConfigs.cpp",
+        "KernelConfigParser.cpp",
+    ],
+    header_libs: [
+        "libutils_headers",
+    ],
+    shared_libs: [
+        "libbase",
+        "libz",
+    ],
+    export_include_dirs: [
+        "include",
+    ],
+    local_include_dirs: [
+        "include/vintf",
     ],
 }
