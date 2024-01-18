@@ -590,8 +590,9 @@ class AssembleVintfImpl : public AssembleVintf {
                 return false;
             }
 
-            if (!setDeviceFcmVersion(halManifest)) {
-                return false;
+            if (!getBooleanFlag("VINTF_IGNORE_TARGET_FCM_VERSION") &&
+                !getBooleanFlag("PRODUCT_ENFORCE_VINTF_MANIFEST")) {
+                halManifest->mLevel = Level::LEGACY;
             }
 
             if (!setDeviceManifestKernel(halManifest)) {
@@ -675,39 +676,6 @@ class AssembleVintfImpl : public AssembleVintf {
                 };
             }
         }
-        return true;
-    }
-
-    bool setDeviceFcmVersion(HalManifest* manifest) {
-        // Not needed for generating empty manifest for DEVICE_FRAMEWORK_COMPATIBILITY_MATRIX_FILE.
-        if (getBooleanFlag("VINTF_IGNORE_TARGET_FCM_VERSION")) {
-            return true;
-        }
-
-        size_t shippingApiLevel = getIntegerFlag("PRODUCT_SHIPPING_API_LEVEL");
-
-        if (manifest->level() != Level::UNSPECIFIED) {
-            if (shippingApiLevel != 0) {
-                auto res = android::vintf::testing::TestTargetFcmVersion(manifest->level(),
-                                                                         shippingApiLevel);
-                if (!res.ok()) err() << "Warning: " << res.error() << std::endl;
-            }
-            return true;
-        }
-        if (!getBooleanFlag("PRODUCT_ENFORCE_VINTF_MANIFEST")) {
-            manifest->mLevel = Level::LEGACY;
-            return true;
-        }
-        // TODO(b/69638851): should be an error if Shipping API level is not defined.
-        // For now, just leave it empty; when framework compatibility matrix is built,
-        // lowest FCM Version is assumed.
-        err() << "Warning: Shipping FCM Version cannot be inferred, because:" << std::endl
-              << "    (1) It is not explicitly declared in device manifest;" << std::endl
-              << "    (2) PRODUCT_ENFORCE_VINTF_MANIFEST is set to true;" << std::endl
-              << "    (3) PRODUCT_SHIPPING_API_LEVEL is undefined." << std::endl
-              << "Assuming 'unspecified' Shipping FCM Version. " << std::endl
-              << "To remove this warning, define 'level' attribute in device manifest."
-              << std::endl;
         return true;
     }
 
