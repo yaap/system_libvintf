@@ -548,6 +548,34 @@ TEST_F(LibVintfTest, HalManifestNativeFqInstancesNoInterface) {
     });
 }
 
+TEST_F(LibVintfTest, QueryNativeInstances) {
+    std::string error;
+    HalManifest manifest;
+    std::string xml = "<manifest " + kMetaVersionStr + R"( type="device">
+            <hal format="native">
+                <name>foo</name>
+                <version>1.0</version>
+                <interface>
+                    <instance>fooinst</instance>
+                </interface>
+           </hal>
+            <hal format="native">
+                <name>bar</name>
+                <fqname>@1.0::I/barinst</fqname>
+           </hal>
+        </manifest>
+    )";
+    ASSERT_TRUE(fromXml(&manifest, xml, &error)) << error;
+
+    EXPECT_EQ(manifest.getNativeInstances("foo"), std::set<std::string>{"fooinst"});
+    EXPECT_TRUE(manifest.hasNativeInstance("foo", "fooinst"));
+    EXPECT_EQ(manifest.getNativeInstances("bar"), std::set<std::string>{"barinst"});
+    EXPECT_TRUE(manifest.hasNativeInstance("bar", "barinst"));
+
+    EXPECT_EQ(manifest.getNativeInstances("baz"), std::set<std::string>{});
+    EXPECT_FALSE(manifest.hasNativeInstance("baz", "bazinst"));
+}
+
 // clang-format off
 
 TEST_F(LibVintfTest, HalManifestDuplicate) {
