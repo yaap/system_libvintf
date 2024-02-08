@@ -111,7 +111,7 @@ struct HalManifest : public HalGroup<ManifestHal>,
 
     // device.mSepolicyVersion. Assume type == device.
     // Abort if type != device.
-    const SepolicyVersion& sepolicyVersion() const;
+    const Version &sepolicyVersion() const;
 
     // framework.mVendorNdks. Assume type == framework.
     // Abort if type != framework.
@@ -249,7 +249,7 @@ struct HalManifest : public HalGroup<ManifestHal>,
 
     // entries for device hal manifest only
     struct {
-        SepolicyVersion mSepolicyVersion;
+        Version mSepolicyVersion;
         std::optional<KernelInfo> mKernel;
     } device;
 

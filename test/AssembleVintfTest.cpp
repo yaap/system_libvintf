@@ -96,7 +96,7 @@ TEST_F(AssembleVintfTest, FrameworkMatrixEmpty) {
     addInput("compatibility_matrix.empty.xml", xmlEmpty);
     setFakeEnvs({
         {"POLICYVERS", "30"},
-        {"PLATFORM_SEPOLICY_VERSION", "202404"},
+        {"PLATFORM_SEPOLICY_VERSION", "10000.0"},
         {"FRAMEWORK_VBMETA_VERSION", "1.0"},
     });
     getInstance()->addKernelConfigInputStream({3, 18, 0}, "android-base.config",
@@ -149,7 +149,7 @@ TEST_F(AssembleVintfTest, FrameworkMatrixEmpty) {
         "    </kernel>\n"
         "    <sepolicy>\n"
         "        <kernel-sepolicy-version>30</kernel-sepolicy-version>\n"
-        "        <sepolicy-version>202404</sepolicy-version>\n"
+        "        <sepolicy-version>10000.0</sepolicy-version>\n"
         "    </sepolicy>\n"
         "    <avb>\n"
         "        <vbmeta-version>1.0</vbmeta-version>\n"
@@ -167,7 +167,7 @@ TEST_F(AssembleVintfTest, FrameworkMatrix) {
         "    </kernel>\n"
         "    <sepolicy>\n"
         "        <kernel-sepolicy-version>30</kernel-sepolicy-version>\n"
-        "        <sepolicy-version>202404</sepolicy-version>\n"
+        "        <sepolicy-version>10000.0</sepolicy-version>\n"
         "    </sepolicy>\n"
         "    <avb>\n"
         "        <vbmeta-version>1.0</vbmeta-version>\n"
@@ -239,7 +239,7 @@ TEST_F(AssembleVintfTest, FrameworkMatrix) {
                "        </interface>\n"
                "    </hal>\n"
                "    <sepolicy>\n"
-               "        <version>202404</version>\n"
+               "        <version>10000.0</version>\n"
                "    </sepolicy>\n"
                "</manifest>\n";
     };
@@ -406,13 +406,13 @@ TEST_F(AssembleVintfTest, ManifestSystemSdk) {
 const std::string gEmptyOutManifest =
     "<manifest " + kMetaVersionStr + " type=\"device\">\n"
     "    <sepolicy>\n"
-    "        <version>202404</version>\n"
+    "        <version>10000.0</version>\n"
     "    </sepolicy>\n"
     "</manifest>\n";
 
 TEST_F(AssembleVintfTest, EmptyManifest) {
     const std::string emptyManifest = "<manifest " + kMetaVersionStr + " type=\"device\" />";
-    setFakeEnvs({{"BOARD_SEPOLICY_VERS", "202404"}, {"IGNORE_TARGET_FCM_VERSION", "true"}});
+    setFakeEnvs({{"BOARD_SEPOLICY_VERS", "10000.0"}, {"IGNORE_TARGET_FCM_VERSION", "true"}});
     addInput("manifest.empty.xml", emptyManifest);
     EXPECT_TRUE(getInstance()->assemble());
     EXPECT_IN(gEmptyOutManifest, getOutput());
@@ -420,7 +420,7 @@ TEST_F(AssembleVintfTest, EmptyManifest) {
 
 TEST_F(AssembleVintfTest, DeviceFrameworkMatrixOptional) {
     setFakeEnvs({{"POLICYVERS", "30"},
-                 {"PLATFORM_SEPOLICY_VERSION", "202404"},
+                 {"PLATFORM_SEPOLICY_VERSION", "10000.0"},
                  {"PLATFORM_SEPOLICY_COMPAT_VERSIONS", "26.0 27.0"},
                  {"FRAMEWORK_VBMETA_VERSION", "1.0"},
                  {"PRODUCT_ENFORCE_VINTF_MANIFEST", "true"}});
@@ -453,7 +453,7 @@ TEST_F(AssembleVintfTest, DeviceFrameworkMatrixOptional) {
         "        <kernel-sepolicy-version>30</kernel-sepolicy-version>\n"
         "        <sepolicy-version>26.0</sepolicy-version>\n"
         "        <sepolicy-version>27.0</sepolicy-version>\n"
-        "        <sepolicy-version>202404</sepolicy-version>\n"
+        "        <sepolicy-version>10000.0</sepolicy-version>\n"
         "    </sepolicy>\n"
         "    <avb>\n"
         "        <vbmeta-version>1.0</vbmeta-version>\n"
@@ -464,7 +464,7 @@ TEST_F(AssembleVintfTest, DeviceFrameworkMatrixOptional) {
 
 TEST_F(AssembleVintfTest, DeviceFrameworkMatrixRequired) {
     setFakeEnvs({{"POLICYVERS", "30"},
-                 {"PLATFORM_SEPOLICY_VERSION", "202404"},
+                 {"PLATFORM_SEPOLICY_VERSION", "10000.0"},
                  {"PLATFORM_SEPOLICY_COMPAT_VERSIONS", "26.0 27.0"},
                  {"FRAMEWORK_VBMETA_VERSION", "1.0"},
                  {"PRODUCT_ENFORCE_VINTF_MANIFEST", "true"}});
@@ -487,7 +487,7 @@ TEST_F(AssembleVintfTest, DeviceFrameworkMatrixRequired) {
 
 TEST_F(AssembleVintfTest, DeviceFrameworkMatrixMultiple) {
     setFakeEnvs({{"POLICYVERS", "30"},
-                 {"PLATFORM_SEPOLICY_VERSION", "202404"},
+                 {"PLATFORM_SEPOLICY_VERSION", "10000.0"},
                  {"PLATFORM_SEPOLICY_COMPAT_VERSIONS", "26.0 27.0"},
                  {"FRAMEWORK_VBMETA_VERSION", "1.0"},
                  {"PRODUCT_ENFORCE_VINTF_MANIFEST", "true"}});
@@ -540,7 +540,7 @@ TEST_F(AssembleVintfTest, DeviceFrameworkMatrixMultiple) {
         "        <kernel-sepolicy-version>30</kernel-sepolicy-version>\n"
         "        <sepolicy-version>26.0</sepolicy-version>\n"
         "        <sepolicy-version>27.0</sepolicy-version>\n"
-        "        <sepolicy-version>202404</sepolicy-version>\n"
+        "        <sepolicy-version>10000.0</sepolicy-version>\n"
         "    </sepolicy>\n"
         "    <avb>\n"
         "        <vbmeta-version>1.0</vbmeta-version>\n"
@@ -656,7 +656,7 @@ TEST_F(AssembleVintfTest, AutoSetMatrixKernelFcm) {
 
 TEST_F(AssembleVintfTest, WithKernelRequirements) {
     setFakeEnvs({{"POLICYVERS", "30"},
-                 {"PLATFORM_SEPOLICY_VERSION", "202404"},
+                 {"PLATFORM_SEPOLICY_VERSION", "10000.0"},
                  {"PRODUCT_ENFORCE_VINTF_MANIFEST", "true"}});
     addInput("compatibility_matrix.xml",
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
@@ -671,7 +671,7 @@ TEST_F(AssembleVintfTest, WithKernelRequirements) {
         "<manifest " + kMetaVersionStr + " type=\"device\" target-level=\"1\">\n"
         "    <kernel target-level=\"1\" version=\"3.18.0\"/>\n"
         "    <sepolicy>\n"
-        "        <version>202404</version>\n"
+        "        <version>10000.0</version>\n"
         "    </sepolicy>\n"
         "</manifest>\n"));
 
@@ -680,7 +680,7 @@ TEST_F(AssembleVintfTest, WithKernelRequirements) {
 
 TEST_F(AssembleVintfTest, NoKernelRequirements) {
     setFakeEnvs({{"POLICYVERS", "30"},
-                 {"PLATFORM_SEPOLICY_VERSION", "202404"},
+                 {"PLATFORM_SEPOLICY_VERSION", "10000.0"},
                  {"PRODUCT_ENFORCE_VINTF_MANIFEST", "true"}});
     addInput("compatibility_matrix.xml",
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
@@ -690,7 +690,7 @@ TEST_F(AssembleVintfTest, NoKernelRequirements) {
         "<manifest " + kMetaVersionStr + " type=\"device\" target-level=\"1\">\n"
         "    <kernel target-level=\"1\"/>\n"
         "    <sepolicy>\n"
-        "        <version>202404</version>\n"
+        "        <version>10000.0</version>\n"
         "    </sepolicy>\n"
         "</manifest>\n"));
 

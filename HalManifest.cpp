@@ -581,7 +581,7 @@ Level HalManifest::level() const {
     return mLevel;
 }
 
-const SepolicyVersion& HalManifest::sepolicyVersion() const {
+const Version &HalManifest::sepolicyVersion() const {
     CHECK(mType == SchemaType::DEVICE);
     return device.mSepolicyVersion;
 }
