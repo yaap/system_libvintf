@@ -40,8 +40,6 @@ std::ostream& operator<<(std::ostream& os, Level l);
 std::ostream& operator<<(std::ostream& os, KernelSepolicyVersion v);
 std::ostream &operator<<(std::ostream &os, const Version &ver);
 std::ostream &operator<<(std::ostream &os, const VersionRange &vr);
-std::ostream& operator<<(std::ostream& os, const SepolicyVersion& ver);
-std::ostream& operator<<(std::ostream& os, const SepolicyVersionRange& vr);
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -73,8 +71,6 @@ bool parse(const std::string& s, Level* l);
 bool parse(const std::string &s, KernelSepolicyVersion *ksv);
 bool parse(const std::string &s, Version *ver);
 bool parse(const std::string &s, VersionRange *vr);
-bool parse(const std::string& s, SepolicyVersion* ver);
-bool parse(const std::string& s, SepolicyVersionRange* ver);
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"

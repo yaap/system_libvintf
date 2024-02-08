@@ -757,14 +757,14 @@ class AssembleVintfImpl : public AssembleVintf {
             }
 
             // Add PLATFORM_SEPOLICY_* to sepolicy.sepolicy-version. Remove dupes.
-            std::set<SepolicyVersion> sepolicyVersions;
+            std::set<Version> sepolicyVersions;
             auto sepolicyVersionStrings = getEnvList("PLATFORM_SEPOLICY_COMPAT_VERSIONS");
             auto currentSepolicyVersionString = getEnv("PLATFORM_SEPOLICY_VERSION");
             if (!currentSepolicyVersionString.empty()) {
                 sepolicyVersionStrings.push_back(currentSepolicyVersionString);
             }
             for (auto&& s : sepolicyVersionStrings) {
-                SepolicyVersion v;
+                Version v;
                 if (!parse(s, &v)) {
                     err() << "Error: unknown sepolicy version '" << s << "' specified by "
                           << (s == currentSepolicyVersionString

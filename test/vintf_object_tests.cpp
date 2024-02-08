@@ -1974,7 +1974,7 @@ TEST_F(KernelTest, Compatible) {
         FAKE_KERNEL("2.0.0", "B1", 1)
         "    <sepolicy>\n"
         "        <kernel-sepolicy-version>0</kernel-sepolicy-version>\n"
-        "        <sepolicy-version>0</sepolicy-version>\n"
+        "        <sepolicy-version>0.0</sepolicy-version>\n"
         "    </sepolicy>\n"
         "</compatibility-matrix>\n"});
     expectKernelFcmVersion(1, Level{1});

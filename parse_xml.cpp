@@ -483,16 +483,8 @@ struct VersionConverter : public XmlTextConverter<Version> {
     std::string elementName() const override { return "version"; }
 };
 
-struct SepolicyVersionConverter : public XmlTextConverter<SepolicyVersion> {
-    std::string elementName() const override { return "version"; }
-};
-
 struct VersionRangeConverter : public XmlTextConverter<VersionRange> {
     std::string elementName() const override { return "version"; }
-};
-
-struct SepolicyVersionRangeConverter : public XmlTextConverter<SepolicyVersionRange> {
-    std::string elementName() const override { return "sepolicy-version"; }
 };
 
 // <version>100</version> <=> Version{kFakeAidlMajorVersion, 100}
@@ -1085,18 +1077,22 @@ struct KernelSepolicyVersionConverter : public XmlTextConverter<KernelSepolicyVe
     std::string elementName() const override { return "kernel-sepolicy-version"; }
 };
 
+struct SepolicyVersionConverter : public XmlTextConverter<VersionRange> {
+    std::string elementName() const override { return "sepolicy-version"; }
+};
+
 struct SepolicyConverter : public XmlNodeConverter<Sepolicy> {
     std::string elementName() const override { return "sepolicy"; }
     void mutateNode(const Sepolicy& object, NodeType* root,
                     const MutateNodeParam& param) const override {
         appendChild(root, KernelSepolicyVersionConverter{}(object.kernelSepolicyVersion(), param));
-        appendChildren(root, SepolicyVersionRangeConverter{}, object.sepolicyVersions(), param);
+        appendChildren(root, SepolicyVersionConverter{}, object.sepolicyVersions(), param);
     }
     bool buildObject(Sepolicy* object, NodeType* root,
                      const BuildObjectParam& param) const override {
         if (!parseChild(root, KernelSepolicyVersionConverter{}, &object->mKernelSepolicyVersion,
                         param) ||
-            !parseChildren(root, SepolicyVersionRangeConverter{}, &object->mSepolicyVersionRanges,
+            !parseChildren(root, SepolicyVersionConverter{}, &object->mSepolicyVersionRanges,
                            param)) {
             return false;
         }
@@ -1165,15 +1161,15 @@ struct SystemSdkConverter : public XmlNodeConverter<SystemSdk> {
     }
 };
 
-struct HalManifestSepolicyConverter : public XmlNodeConverter<SepolicyVersion> {
+struct HalManifestSepolicyConverter : public XmlNodeConverter<Version> {
     std::string elementName() const override { return "sepolicy"; }
-    void mutateNode(const SepolicyVersion& object, NodeType* root,
+    void mutateNode(const Version& object, NodeType* root,
                     const MutateNodeParam& param) const override {
-        appendChild(root, SepolicyVersionConverter{}(object, param));
+        appendChild(root, VersionConverter{}(object, param));
     }
-    bool buildObject(SepolicyVersion* object, NodeType* root,
+    bool buildObject(Version* object, NodeType* root,
                      const BuildObjectParam& param) const override {
-        return parseChild(root, SepolicyVersionConverter{}, object, param);
+        return parseChild(root, VersionConverter{}, object, param);
     }
 };
 
@@ -1253,7 +1249,7 @@ struct HalManifestConverter : public XmlNodeConverter<HalManifest> {
         }
         if (object.mType == SchemaType::DEVICE) {
             if (param.flags.isSepolicyEnabled()) {
-                if (object.device.mSepolicyVersion != SepolicyVersion{}) {
+                if (object.device.mSepolicyVersion != Version{}) {
                     appendChild(root, HalManifestSepolicyConverter{}(object.device.mSepolicyVersion,
                                                                      param));
                 }
@@ -1595,7 +1591,6 @@ CREATE_CONVERT_FN(KernelInfo)
 
 // Create convert functions for testing.
 CREATE_CONVERT_FN(Version)
-CREATE_CONVERT_FN(SepolicyVersion)
 CREATE_CONVERT_FN(KernelConfigTypedValue)
 CREATE_CONVERT_FN(MatrixHal)
 CREATE_CONVERT_FN(ManifestHal)
