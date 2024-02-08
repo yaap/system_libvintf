@@ -21,16 +21,12 @@
 namespace android::vintf {
 
 std::string toXml(const Version& o, SerializeFlags::Type flags = SerializeFlags::EVERYTHING);
-std::string toXml(const SepolicyVersion& o,
-                  SerializeFlags::Type flags = SerializeFlags::EVERYTHING);
 std::string toXml(const KernelConfigTypedValue& o,
                   SerializeFlags::Type flags = SerializeFlags::EVERYTHING);
 std::string toXml(const ManifestHal& o, SerializeFlags::Type flags = SerializeFlags::EVERYTHING);
 std::string toXml(const MatrixHal& o, SerializeFlags::Type flags = SerializeFlags::EVERYTHING);
 
 [[nodiscard]] bool fromXml(Version* o, const std::string& xml, std::string* error = nullptr);
-[[nodiscard]] bool fromXml(SepolicyVersion* o, const std::string& xml,
-                           std::string* error = nullptr);
 [[nodiscard]] bool fromXml(KernelConfigTypedValue* o, const std::string& xml,
                            std::string* error = nullptr);
 [[nodiscard]] bool fromXml(MatrixHal* o, const std::string& xml, std::string* error = nullptr);

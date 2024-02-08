@@ -462,7 +462,7 @@ bool CompatibilityMatrix::matchInstance(HalFormat format, const std::string& hal
     return found;
 }
 
-std::vector<SepolicyVersionRange> CompatibilityMatrix::getSepolicyVersions() const {
+std::vector<VersionRange> CompatibilityMatrix::getSepolicyVersions() const {
     if (type() == SchemaType::FRAMEWORK) return framework.mSepolicy.sepolicyVersions();
     return {};
 }

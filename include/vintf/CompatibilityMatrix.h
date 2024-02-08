@@ -68,7 +68,7 @@ struct CompatibilityMatrix : public HalGroup<MatrixHal>,
 
     std::string getVendorNdkVersion() const;
 
-    std::vector<SepolicyVersionRange> getSepolicyVersions() const;
+    std::vector<VersionRange> getSepolicyVersions() const;
 
     bool add(MatrixHal&&, std::string* error = nullptr);
     // Move all hals from another CompatibilityMatrix to this.

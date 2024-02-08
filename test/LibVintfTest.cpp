@@ -155,10 +155,10 @@ public:
         return ret;
     }
 
-    HalManifest testDeviceManifestWithSepolicy(SepolicyVersion sepolicyVersion) {
+    HalManifest testDeviceManifest() {
         HalManifest vm;
         vm.mType = SchemaType::DEVICE;
-        vm.device.mSepolicyVersion = sepolicyVersion;
+        vm.device.mSepolicyVersion = {25, 0};
         vm.add(createManifestHal(HalFormat::HIDL, "android.hardware.camera",
                                  {Transport::HWBINDER, Arch::ARCH_EMPTY},
                                  {
@@ -172,7 +172,6 @@ public:
 
         return vm;
     }
-    HalManifest testDeviceManifest() { return testDeviceManifestWithSepolicy({25, 0}); }
     HalManifest testDeviceManifestWithXmlFile() {
         HalManifest vm = testDeviceManifest();
         ManifestXmlFile xmlFile;
@@ -253,16 +252,6 @@ TEST_F(LibVintfTest, Stringify) {
     VersionRange v2;
     EXPECT_TRUE(parse("1.2-3", &v2));
     EXPECT_EQ(v, v2);
-    SepolicyVersionRange v3(4, std::nullopt);
-    EXPECT_EQ(to_string(v3), "4");
-    SepolicyVersionRange v4;
-    EXPECT_TRUE(parse("4", &v4));
-    EXPECT_EQ(v3, v4);
-    SepolicyVersion v5(5, std::nullopt);
-    EXPECT_EQ(to_string(v5), "5");
-    SepolicyVersion v6;
-    EXPECT_TRUE(parse("5", &v6));
-    EXPECT_EQ(v5, v6);
 }
 
 TEST_F(LibVintfTest, GetTransport) {
@@ -315,33 +304,6 @@ TEST_F(LibVintfTest, HalManifestConverter) {
         "    </hal>\n"
         "    <sepolicy>\n"
         "        <version>25.0</version>\n"
-        "    </sepolicy>\n"
-        "</manifest>\n");
-    HalManifest vm2;
-    EXPECT_TRUE(fromXml(&vm2, xml));
-    EXPECT_EQ(vm, vm2);
-}
-
-TEST_F(LibVintfTest, HalManifestConverterWithVfrcSepolicy) {
-    HalManifest vm = testDeviceManifestWithSepolicy({202404, std::nullopt});
-    std::string xml =
-        toXml(vm, SerializeFlags::HALS_ONLY.enableSepolicy());
-    EXPECT_EQ(xml,
-        "<manifest " + kMetaVersionStr + " type=\"device\">\n"
-        "    <hal format=\"hidl\">\n"
-        "        <name>android.hardware.camera</name>\n"
-        "        <transport>hwbinder</transport>\n"
-        "        <fqname>@2.0::IBetterCamera/camera</fqname>\n"
-        "        <fqname>@2.0::ICamera/default</fqname>\n"
-        "        <fqname>@2.0::ICamera/legacy/0</fqname>\n"
-        "    </hal>\n"
-        "    <hal format=\"hidl\">\n"
-        "        <name>android.hardware.nfc</name>\n"
-        "        <transport arch=\"32+64\">passthrough</transport>\n"
-        "        <fqname>@1.0::INfc/default</fqname>\n"
-        "    </hal>\n"
-        "    <sepolicy>\n"
-        "        <version>202404</version>\n"
         "    </sepolicy>\n"
         "</manifest>\n");
     HalManifest vm2;
@@ -707,13 +669,6 @@ TEST_F(LibVintfTest, VersionConverter) {
     Version v2;
     EXPECT_TRUE(fromXml(&v2, xml));
     EXPECT_EQ(v, v2);
-
-    SepolicyVersion v3(202404, std::nullopt);
-    std::string xml2 = toXml(v3);
-    EXPECT_EQ(xml2, "<version>202404</version>\n");
-    SepolicyVersion v4;
-    EXPECT_TRUE(fromXml(&v4, xml2));
-    EXPECT_EQ(v3, v4);
 }
 
 static bool insert(std::map<std::string, HalInterface>* map, HalInterface&& intf) {
@@ -844,7 +799,7 @@ TEST_F(LibVintfTest, CompatibilityMatrixConverter) {
             {KernelConfig{"CONFIG_FOO", Tristate::YES}, KernelConfig{"CONFIG_BAR", "stringvalue"}}}));
     EXPECT_TRUE(add(cm, MatrixKernel{KernelVersion(4, 4, 1),
             {KernelConfig{"CONFIG_BAZ", 20}, KernelConfig{"CONFIG_BAR", KernelConfigRangeValue{3, 5} }}}));
-    set(cm, Sepolicy(30, {{25, 0}, {26, 0, 3}, {202404, std::nullopt}}));
+    set(cm, Sepolicy(30, {{25, 0}, {26, 0, 3}}));
     setAvb(cm, Version{2, 1});
     std::string xml = toXml(cm);
     EXPECT_EQ(xml,
@@ -891,7 +846,6 @@ TEST_F(LibVintfTest, CompatibilityMatrixConverter) {
             "        <kernel-sepolicy-version>30</kernel-sepolicy-version>\n"
             "        <sepolicy-version>25.0</sepolicy-version>\n"
             "        <sepolicy-version>26.0-3</sepolicy-version>\n"
-            "        <sepolicy-version>202404</sepolicy-version>\n"
             "    </sepolicy>\n"
             "    <avb>\n"
             "        <vbmeta-version>2.1</vbmeta-version>\n"
@@ -1514,7 +1468,6 @@ TEST_F(LibVintfTest, FullCompat) {
         "        <kernel-sepolicy-version>30</kernel-sepolicy-version>\n"
         "        <sepolicy-version>25.5</sepolicy-version>\n"
         "        <sepolicy-version>26.0-3</sepolicy-version>\n"
-        "        <sepolicy-version>202404</sepolicy-version>\n"
         "    </sepolicy>\n"
         "    <avb>\n"
         "        <vbmeta-version>2.1</vbmeta-version>\n"
@@ -1560,23 +1513,6 @@ TEST_F(LibVintfTest, FullCompat) {
     EXPECT_FALSE(manifest.checkCompatibility(matrix));
     set(matrix, Sepolicy{30, {{25, 4}}});
     EXPECT_TRUE(manifest.checkCompatibility(matrix, &error)) << error;
-    set(matrix, Sepolicy{30, {{202404, std::nullopt}}});
-    EXPECT_FALSE(manifest.checkCompatibility(matrix));
-
-    // vFRC sepolicy test cases
-    manifestXml =
-        "<manifest " + kMetaVersionStr + " type=\"device\">\n"
-        "    <sepolicy>\n"
-        "        <version>202404</version>\n"
-        "    </sepolicy>\n"
-        "</manifest>\n";
-    EXPECT_TRUE(fromXml(&manifest, manifestXml));
-    set(matrix, Sepolicy{30, {{202404, std::nullopt}}});
-    EXPECT_TRUE(manifest.checkCompatibility(matrix)) << error;
-    set(matrix, Sepolicy{30, {{202404, 0}}});
-    EXPECT_FALSE(manifest.checkCompatibility(matrix)) << error;
-    set(matrix, Sepolicy{30, {{202504, std::nullopt}}});
-    EXPECT_FALSE(manifest.checkCompatibility(matrix));
 }
 
 // clang-format on
@@ -4243,7 +4179,7 @@ TEST_F(LibVintfTest, RegexInstanceCompat) {
         "    </hal>\n"
         "    <sepolicy>\n"
         "        <kernel-sepolicy-version>0</kernel-sepolicy-version>\n"
-        "        <sepolicy-version>0</sepolicy-version>\n"
+        "        <sepolicy-version>0.0</sepolicy-version>\n"
         "    </sepolicy>\n"
         "</compatibility-matrix>\n";
     EXPECT_TRUE(fromXml(&matrix, matrixXml, &error)) << error;
