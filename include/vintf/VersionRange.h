@@ -19,6 +19,7 @@
 #define ANDROID_VINTF_VERSION_RANGE_H
 
 #include <stdint.h>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -71,6 +72,33 @@ struct VersionRange {
     size_t majorVer;
     size_t minMinor;
     size_t maxMinor;
+};
+
+struct SepolicyVersionRange {
+    size_t majorVer;
+    std::optional<size_t> minMinor;
+    std::optional<size_t> maxMinor;
+
+    constexpr SepolicyVersionRange() : SepolicyVersionRange(0u, std::nullopt, std::nullopt) {}
+    constexpr SepolicyVersionRange(size_t mjV, std::optional<size_t> miV)
+        : SepolicyVersionRange(mjV, miV, miV) {}
+    constexpr SepolicyVersionRange(size_t mjV, std::optional<size_t> miM, std::optional<size_t> mxM)
+        : majorVer(mjV), minMinor(miM), maxMinor(mxM) {}
+    constexpr inline SepolicyVersion minVer() const { return SepolicyVersion(majorVer, minMinor); }
+    constexpr inline SepolicyVersion maxVer() const { return SepolicyVersion(majorVer, maxMinor); }
+    inline bool isSingleVersion() const { return minMinor == maxMinor; }
+
+    bool operator==(const SepolicyVersionRange& other) const = default;
+    bool operator!=(const SepolicyVersionRange& other) const = default;
+
+    // If this == 2.3-7,
+    //     ver == 2.2: false
+    //     ver == 2.3: true
+    //     ver == 2.7: true
+    //     ver == 2.8: true
+    inline bool supportedBy(const SepolicyVersion& ver) const {
+        return majorVer == ver.majorVer && minMinor <= ver.minorVer;
+    }
 };
 
 } // namespace vintf
