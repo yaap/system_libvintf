@@ -74,10 +74,6 @@ static std::unique_ptr<PropertyFetcher> createDefaultPropertyFetcher() {
     return propertyFetcher;
 }
 
-static std::unique_ptr<ApexInterface> createDefaultApex() {
-    return std::make_unique<details::Apex>();
-}
-
 // Check whether the current executable is allowed to use libvintf.
 // Allowed binaries:
 // - host binaries
@@ -129,21 +125,10 @@ std::shared_ptr<const HalManifest> VintfObject::GetDeviceHalManifest() {
 }
 
 std::shared_ptr<const HalManifest> VintfObject::getDeviceHalManifest() {
-    // Check if any updates to the APEX data, if so rebuild the manifest
-    {
-        std::lock_guard<std::mutex> lock(mDeviceManifest.mutex);
-        if (mDeviceManifest.fetchedOnce) {
-            if (getApex()->HasUpdate(getFileSystem().get(), getPropertyFetcher().get())) {
-                LOG(INFO) << __func__ << ": Reloading VINTF information.";
-                mDeviceManifest.object = nullptr;
-                mDeviceManifest.fetchedOnce = false;
-                // TODO(b/242070736): only APEX data needs to be updated
-            }
-        }
-    }
-
+    // TODO(b/242070736): only APEX data needs to be updated
     return Get(__func__, &mDeviceManifest,
-               std::bind(&VintfObject::fetchDeviceHalManifest, this, _1, _2));
+               std::bind(&VintfObject::fetchDeviceHalManifest, this, _1, _2),
+               apex::GetModifiedTime(getFileSystem().get(), getPropertyFetcher().get()));
 }
 
 std::shared_ptr<const HalManifest> VintfObject::GetFrameworkHalManifest() {
@@ -294,7 +279,7 @@ status_t VintfObject::fetchDeviceHalManifest(HalManifest* out, std::string* erro
 status_t VintfObject::fetchDeviceHalManifestApex(HalManifest* out, std::string* error) {
     std::vector<std::string> dirs;
     status_t status =
-        getApex()->DeviceVintfDirs(getFileSystem().get(), getPropertyFetcher().get(), &dirs, error);
+        apex::GetDeviceVintfDirs(getFileSystem().get(), getPropertyFetcher().get(), &dirs, error);
     if (status != OK) {
         return status;
     }
@@ -1074,10 +1059,6 @@ const std::unique_ptr<ObjectFactory<RuntimeInfo>>& VintfObject::getRuntimeInfoFa
     return mRuntimeInfoFactory;
 }
 
-const std::unique_ptr<ApexInterface>& VintfObject::getApex() {
-    return mApex;
-}
-
 android::base::Result<bool> VintfObject::hasFrameworkCompatibilityMatrixExtensions() {
     std::vector<CompatibilityMatrix> matrixFragments;
     std::string error;
@@ -1445,17 +1426,11 @@ VintfObjectBuilder& VintfObjectBuilder::setPropertyFetcher(std::unique_ptr<Prope
     return *this;
 }
 
-VintfObjectBuilder& VintfObjectBuilder::setApex(std::unique_ptr<ApexInterface>&& a) {
-    mObject->mApex = std::move(a);
-    return *this;
-}
-
 std::unique_ptr<VintfObject> VintfObjectBuilder::buildInternal() {
     if (!mObject->mFileSystem) mObject->mFileSystem = createDefaultFileSystem();
     if (!mObject->mRuntimeInfoFactory)
         mObject->mRuntimeInfoFactory = std::make_unique<ObjectFactory<RuntimeInfo>>();
     if (!mObject->mPropertyFetcher) mObject->mPropertyFetcher = createDefaultPropertyFetcher();
-    if (!mObject->mApex) mObject->mApex = createDefaultApex();
     return std::move(mObject);
 }
 
