@@ -136,8 +136,10 @@ std::shared_ptr<const HalManifest> VintfObject::GetFrameworkHalManifest() {
 }
 
 std::shared_ptr<const HalManifest> VintfObject::getFrameworkHalManifest() {
+    // TODO(b/242070736): only APEX data needs to be updated
     return Get(__func__, &mFrameworkManifest,
-               std::bind(&VintfObject::fetchFrameworkHalManifest, this, _1, _2));
+               std::bind(&VintfObject::fetchFrameworkHalManifest, this, _1, _2),
+               apex::GetModifiedTime(getFileSystem().get(), getPropertyFetcher().get()));
 }
 
 std::shared_ptr<const CompatibilityMatrix> VintfObject::GetDeviceCompatibilityMatrix() {
@@ -263,6 +265,19 @@ status_t VintfObject::addDirectoryManifests(const std::string& directory, HalMan
     return OK;
 }
 
+// addDirectoryManifests for multiple directories
+status_t VintfObject::addDirectoriesManifests(const std::vector<std::string>& directories,
+                                              HalManifest* manifest, bool forceSchemaType,
+                                              std::string* error) {
+    for (const auto& dir : directories) {
+        auto status = addDirectoryManifests(dir, manifest, forceSchemaType, error);
+        if (status != OK) {
+            return status;
+        }
+    }
+    return OK;
+}
+
 // Create device HalManifest
 // 1. Create manifest based on /vendor /odm data
 // 2. Add any APEX data
@@ -283,25 +298,7 @@ status_t VintfObject::fetchDeviceHalManifestApex(HalManifest* out, std::string* 
     if (status != OK) {
         return status;
     }
-
-    if (dirs.empty()) {
-        return OK;
-    }
-    // Create HalManifest for all APEX HALs so that the apex defined attribute can
-    // be set.
-    HalManifest apexManifest;
-    for (const auto& dir : dirs) {
-        status = addDirectoryManifests(dir, &apexManifest, false, error);
-        if (status != OK) {
-            return status;
-        }
-    }
-
-    // Add APEX HALs to out
-    if (!out->addAllHals(&apexManifest, error)) {
-        return UNKNOWN_ERROR;
-    }
-    return OK;
+    return addDirectoriesManifests(dirs, out, /*forceSchemaType=*/false, error);
 }
 
 // Priority for loading vendor manifest:
@@ -508,8 +505,23 @@ status_t VintfObject::fetchFrameworkHalManifest(HalManifest* out, std::string* e
     if (status != OK) {
         return status;
     }
+    status = fetchFrameworkHalManifestApex(out, error);
+    if (status != OK) {
+        return status;
+    }
     filterHalsByDeviceManifestLevel(out);
     return OK;
+}
+
+// Fetch fragments from apexes originated from /system.
+status_t VintfObject::fetchFrameworkHalManifestApex(HalManifest* out, std::string* error) {
+    std::vector<std::string> dirs;
+    status_t status = apex::GetFrameworkVintfDirs(getFileSystem().get(), getPropertyFetcher().get(),
+                                                  &dirs, error);
+    if (status != OK) {
+        return status;
+    }
+    return addDirectoriesManifests(dirs, out, /*forceSchemaType=*/false, error);
 }
 
 // If deviceManifestLevel is not in the range [minLevel, maxLevel] of a HAL, remove the HAL,

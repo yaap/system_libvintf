@@ -36,8 +36,9 @@ static bool isApexReady(PropertyFetcher* propertyFetcher) {
 #endif
 }
 
-status_t GetDeviceVintfDirs(FileSystem* fileSystem, PropertyFetcher* propertyFetcher,
-                            std::vector<std::string>* dirs, std::string* error) {
+static status_t GetVintfDirs(FileSystem* fileSystem, PropertyFetcher* propertyFetcher,
+                             std::vector<std::string>* dirs, std::string* error,
+                             std::function<bool(const std::string&)> filter) {
     std::string apexInfoFile = details::kApexInfoFile;
     std::string apexDir = "/apex";
     if (!isApexReady(propertyFetcher)) {
@@ -72,7 +73,7 @@ status_t GetDeviceVintfDirs(FileSystem* fileSystem, PropertyFetcher* propertyFet
         if (!apexInfo.hasPreinstalledModulePath()) continue;
 
         const std::string& path = apexInfo.getPreinstalledModulePath();
-        if (StartsWith(path, "/vendor/apex/") || StartsWith(path, "/system/vendor/apex/")) {
+        if (filter(path)) {
             dirs->push_back(fmt::format("{}/{}/" VINTF_SUB_DIR, apexDir, apexInfo.getModuleName()));
         }
     }
@@ -97,6 +98,22 @@ std::optional<TimeSpec> GetModifiedTime(FileSystem* fileSystem, PropertyFetcher*
         return std::nullopt;
     }
     return mtime;
+}
+
+status_t GetDeviceVintfDirs(FileSystem* fileSystem, PropertyFetcher* propertyFetcher,
+                            std::vector<std::string>* dirs, std::string* error) {
+    return GetVintfDirs(fileSystem, propertyFetcher, dirs, error, [](const std::string& path) {
+        return StartsWith(path, "/vendor/apex/") || StartsWith(path, "/system/vendor/apex/");
+    });
+}
+
+status_t GetFrameworkVintfDirs(FileSystem* fileSystem, PropertyFetcher* propertyFetcher,
+                               std::vector<std::string>* dirs, std::string* error) {
+    return GetVintfDirs(fileSystem, propertyFetcher, dirs, error, [](const std::string& path) {
+        return StartsWith(path, "/system/apex/") || StartsWith(path, "/system_ext/apex/") ||
+               StartsWith(path, "/system/system_ext/apex/") || StartsWith(path, "/product/apex/") ||
+               StartsWith(path, "/system/product/apex/");
+    });
 }
 
 }  // namespace android::vintf::apex
