@@ -305,6 +305,9 @@ class VintfObject {
                           std::string* error = nullptr);
     status_t addDirectoryManifests(const std::string& directory, HalManifest* manifests,
                                    bool ignoreSchemaType, std::string* error);
+    status_t addDirectoriesManifests(const std::vector<std::string>& directories,
+                                     HalManifest* manifests, bool ignoreSchemaType,
+                                     std::string* error);
     status_t fetchDeviceHalManifest(HalManifest* out, std::string* error = nullptr);
     status_t fetchDeviceHalManifestMinusApex(HalManifest* out, std::string* error = nullptr);
     status_t fetchDeviceHalManifestApex(HalManifest* out, std::string* error = nullptr);
@@ -314,6 +317,7 @@ class VintfObject {
                                  std::string* error = nullptr);
     status_t fetchVendorHalManifest(HalManifest* out, std::string* error = nullptr);
     status_t fetchFrameworkHalManifest(HalManifest* out, std::string* error = nullptr);
+    status_t fetchFrameworkHalManifestApex(HalManifest* out, std::string* error = nullptr);
 
     status_t fetchUnfilteredFrameworkHalManifest(HalManifest* out, std::string* error);
     void filterHalsByDeviceManifestLevel(HalManifest* out);
