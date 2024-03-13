@@ -26,10 +26,10 @@
 
 #include <utils/Errors.h>
 
+using TimeSpec = struct timespec;
+
 namespace android {
 namespace vintf {
-
-using TimeSpec = struct timespec;
 
 // Queries the file system in the correct way. Files can come from
 // an actual file system, a sub-directory, or from ADB, depending on the

@@ -488,8 +488,10 @@ class VintfObjectTestBase : public ::testing::Test {
                           .setRuntimeInfoFactory(std::make_unique<NiceMock<MockRuntimeInfoFactory>>(
                               std::make_shared<NiceMock<MockRuntimeInfo>>()))
                           .setPropertyFetcher(std::make_unique<NiceMock<MockPropertyFetcher>>())
-                          .setApex(std::make_unique<NiceMock<MockApex>>())
                           .build();
+
+        ON_CALL(propertyFetcher(), getBoolProperty("apex.all.ready", _))
+            .WillByDefault(Return(true));
     }
     virtual void TearDown() {
         Mock::VerifyAndClear(&fetcher());
@@ -585,44 +587,9 @@ class VintfObjectTestBase : public ::testing::Test {
     MockRuntimeInfoFactory& runtimeInfoFactory() {
         return static_cast<MockRuntimeInfoFactory&>(*vintfObject->getRuntimeInfoFactory());
     }
-    MockApex& apex() {
-        return static_cast<MockApex&>(*vintfObject->getApex());
-    }
-    // Setup APEX calls
-    void SetUpApex(const std::string &manifest,
-                   const std::string &apexDir="/apex/com.test/") {
 
-        // Look in every APEX for data
-        std::vector<std::string> apex_dirs{apexDir + kVintfSubDir};
-
-
-        // Map the apex with manifest to the files below
-        const std::string& active_apex = apex_dirs.at(0);
-
-        EXPECT_CALL(apex(), DeviceVintfDirs(_, _, _, _))
-            .WillOnce(Invoke([apex_dirs](auto*, auto*, auto* out, auto*){
-                *out = apex_dirs;
-                return ::android::OK;
-            }))
-            ;
-
-        EXPECT_CALL(fetcher(), listFiles(_, _, _))
-                .WillRepeatedly(Invoke([](const auto&, auto* out, auto*) {
-                  *out = {};
-                  return ::android::OK;
-                }));
-
-        EXPECT_CALL(fetcher(), listFiles(StrEq(active_apex), _, _))
-            .WillOnce(Invoke([](const auto&, auto* out, auto*) {
-              *out = {"manifest.xml"};
-              return ::android::OK;
-            }));
-
-        // Expect to fetch APEX directory manifest once.
-        expectFetch(std::string(active_apex).append("manifest.xml"), manifest);
-
-        ON_CALL(propertyFetcher(), getBoolProperty("apex.all.ready", _))
-            .WillByDefault(Return(true));
+    void noApex() {
+        expectFileNotExist(StartsWith("/apex/"));
     }
 
     std::unique_ptr<VintfObject> vintfObject;
@@ -634,6 +601,7 @@ class VintfObjectCompatibleTest : public VintfObjectTestBase {
     virtual void SetUp() {
         VintfObjectTestBase::SetUp();
         setupMockFetcher(vendorManifestXml1, systemMatrixXml1, systemManifestXml1, vendorMatrixXml1);
+        noApex();
     }
 };
 
@@ -908,77 +876,41 @@ bool containsApexManifest(const std::shared_ptr<const HalManifest>& p) {
 
 class DeviceManifestTest : public VintfObjectTestBase {
    protected:
-    void setupApex(const std::string &apexWithManifestDir="/apex/com.test/",
-                   const std::string &manifest=apexHalManifest,
-                   const std::string &apexWithoutManifestDir= "/apex/com.novintf/") {
-
-      // Mimic the system initialization
-      //  When first building device manifest setup for no device vintf dirs
-      //  Followed by HasUpdate() -> true with device vintf dirs
-      //  After building the APEX version expect HasUpdate to false with no further call for
-      //   device vintf dirs
-
-      // Look in every APEX for data, only  apexWithManifest will contain a manifest file
-      std::vector<std::string> apex_dirs{apexWithManifestDir + kVintfSubDir,
-                                         apexWithoutManifestDir + kVintfSubDir};
-
-      // Map the apex with manifest to the files below
-      const std::string& active_apex = apex_dirs.at(0);
-
-      EXPECT_CALL(apex(), DeviceVintfDirs(_, _, _, _))
-          .WillOnce(Invoke([](auto*, auto*, auto* out, auto*){
-            *out = {};
-            return ::android::OK;
-          })) // Initialization
-          .WillOnce(Invoke([apex_dirs](auto*, auto*, auto* out, auto*){
-            *out = apex_dirs;
-            return ::android::OK;
-          })) // after apex loaded
-          ;
-
-      EXPECT_CALL(apex(), HasUpdate(_, _)) // Not called during init
-          .WillOnce(Return(true)) // Apex loaded
-          .WillOnce(Return(false)) // no updated to apex data
-          ;
-
-      ON_CALL(propertyFetcher(), getBoolProperty("apex.all.ready", _))
-          .WillByDefault(Return(true));
-
-      EXPECT_CALL(fetcher(), listFiles(_, _, _))
-          .WillRepeatedly(Invoke([](const auto&, auto* out, auto*) {
-              *out = {};
-              return ::android::OK;
-          }));
-
-      EXPECT_CALL(fetcher(), listFiles(StrEq(active_apex), _, _))
-          .WillOnce(Invoke([](const auto&, auto* out, auto*) {
-              *out = {"manifest.xml"};
-              return ::android::OK;
-          }));
-
-
-      // Expect to fetch APEX directory manifest once.
-      expectFetch(std::string(active_apex).append("manifest.xml"), manifest);
-
+    void expectApex(const std::string& halManifest = apexHalManifest) {
+        expectFetchRepeatedly(kApexInfoFile, R"(<apex-info-list>
+            <apex-info moduleName="com.test"
+                preinstalledModulePath="/vendor/apex/com.test.apex" isActive="true"/>
+            <apex-info moduleName="com.novintf"
+                preinstalledModulePath="/vendor/apex/com.novintf.apex" isActive="true"/>
+        </apex-info-list>)");
+        EXPECT_CALL(fetcher(), modifiedTime(kApexInfoFile, _, _))
+            .WillOnce(Invoke([](auto, TimeSpec* out, auto){
+                *out = {};
+                return ::android::OK;
+            }))
+            // Update once, but no more.
+            .WillRepeatedly(Invoke([](auto, TimeSpec* out, auto){
+                *out = {1,};
+                return ::android::OK;
+            }))
+            ;
+        ON_CALL(fetcher(), listFiles("/apex/com.test/etc/vintf/", _, _))
+            .WillByDefault(Invoke([](auto, std::vector<std::string>* out, auto){
+                *out = {"manifest.xml"};
+                return ::android::OK;
+            }));
+        expectFetchRepeatedly("/apex/com.test/etc/vintf/manifest.xml", halManifest);
     }
 
     // Expect that /vendor/etc/vintf/manifest.xml is fetched.
-    void expectVendorManifest(bool repeatedly = false) {
-        if (repeatedly) {
-            expectFetchRepeatedly(kVendorManifest, vendorEtcManifest);
-        } else {
-            expectFetch(kVendorManifest, vendorEtcManifest);
-        }
+    void expectVendorManifest() {
+        expectFetchRepeatedly(kVendorManifest, vendorEtcManifest);
     }
     // /vendor/etc/vintf/manifest.xml does not exist.
     void noVendorManifest() { expectFileNotExist(StrEq(kVendorManifest)); }
     // Expect some ODM manifest is fetched.
-    void expectOdmManifest(bool repeatedly = false) {
-        if (repeatedly) {
-            expectFetchRepeatedly(kOdmManifest, odmManifest);
-        } else {
-            expectFetch(kOdmManifest, odmManifest);
-        }
+    void expectOdmManifest() {
+        expectFetchRepeatedly(kOdmManifest, odmManifest);
     }
     void noOdmManifest() { expectFileNotExist(StartsWith("/odm/")); }
     std::shared_ptr<const HalManifest> get() {
@@ -990,6 +922,7 @@ class DeviceManifestTest : public VintfObjectTestBase {
 TEST_F(DeviceManifestTest, Combine1) {
     expectVendorManifest();
     expectOdmManifest();
+    noApex();
     auto p = get();
     ASSERT_NE(nullptr, p);
     EXPECT_TRUE(containsVendorEtcManifest(p));
@@ -1002,6 +935,7 @@ TEST_F(DeviceManifestTest, Combine1) {
 TEST_F(DeviceManifestTest, Combine2) {
     expectVendorManifest();
     noOdmManifest();
+    noApex();
     auto p = get();
     ASSERT_NE(nullptr, p);
     EXPECT_TRUE(containsVendorEtcManifest(p));
@@ -1014,6 +948,7 @@ TEST_F(DeviceManifestTest, Combine2) {
 TEST_F(DeviceManifestTest, Combine3) {
     noVendorManifest();
     expectOdmManifest();
+    noApex();
     auto p = get();
     ASSERT_NE(nullptr, p);
     EXPECT_FALSE(containsVendorEtcManifest(p));
@@ -1026,6 +961,7 @@ TEST_F(DeviceManifestTest, Combine3) {
 TEST_F(DeviceManifestTest, Combine4) {
     noVendorManifest();
     noOdmManifest();
+    noApex();
     expectFetch(kVendorLegacyManifest, vendorManifest);
     auto p = get();
     ASSERT_NE(nullptr, p);
@@ -1036,137 +972,29 @@ TEST_F(DeviceManifestTest, Combine4) {
 }
 
 // Run the same tests as above (Combine1,2,3,4) including APEX data.
-// APEX tests all of the same variation:
-//   create device manifest without APEX data
-//   trigger update to APEX
-//   create new device manifest with APEX data
-//   no new APEX data
-//
-// Since HalManifest is created twice expect[Vendor|Odm]Manifest will
-// be called multiple times compared to Combine test.
 
 // Test /vendor/etc/vintf/manifest.xml + ODM manifest + APEX
-TEST_F(DeviceManifestTest, ApexCombine1) {
-    expectVendorManifest(true); // Create device manifest twice.
-    expectOdmManifest(true); // Create device manifest twice.
-    setupApex();
+TEST_F(DeviceManifestTest, Combine5) {
+    expectVendorManifest();
+    expectOdmManifest();
+    expectApex();
     auto p = get();
     ASSERT_NE(nullptr, p);
     EXPECT_TRUE(containsVendorEtcManifest(p));
     EXPECT_TRUE(vendorEtcManifestOverridden(p));
     EXPECT_TRUE(containsOdmManifest(p));
     EXPECT_FALSE(containsVendorManifest(p));
-
-    EXPECT_FALSE(containsApexManifest(p));
-
-    // Second call should create new maninfest containing APEX info.
-    auto p2 = get();
-    ASSERT_NE(nullptr, p2);
-    ASSERT_NE(p, p2);
-    EXPECT_TRUE(containsVendorEtcManifest(p2));
-    EXPECT_TRUE(vendorEtcManifestOverridden(p2));
-    EXPECT_TRUE(containsOdmManifest(p2));
-    EXPECT_FALSE(containsVendorManifest(p2));
-
-    EXPECT_TRUE(containsApexManifest(p2));
-
-    // Third call expect no update and no call to DeviceVintfDirs.
-    auto p3 = get();
-    ASSERT_EQ(p2,p3);
-}
-
-// Test /vendor/etc/vintf/manifest.xml + APEX
-TEST_F(DeviceManifestTest, ApexCombine2) {
-    expectVendorManifest(true); // Create device manifest twice.
-    noOdmManifest();
-
-    setupApex();
-    auto p = get();
-    ASSERT_NE(nullptr, p);
-    EXPECT_TRUE(containsVendorEtcManifest(p));
-    EXPECT_FALSE(vendorEtcManifestOverridden(p));
-    EXPECT_FALSE(containsOdmManifest(p));
-    EXPECT_FALSE(containsVendorManifest(p));
-
-    EXPECT_FALSE(containsApexManifest(p));
+    EXPECT_TRUE(containsApexManifest(p));
 
     // Second call should create new maninfest containing APEX info.
     auto p2 = get();
     ASSERT_NE(nullptr, p2);
     ASSERT_NE(p, p2);
-    EXPECT_TRUE(containsVendorEtcManifest(p2));
-    EXPECT_FALSE(vendorEtcManifestOverridden(p2));
-    EXPECT_FALSE(containsOdmManifest(p2));
-    EXPECT_FALSE(containsVendorManifest(p2));
-
-    EXPECT_TRUE(containsApexManifest(p2));
 
     // Third call expect no update and no call to DeviceVintfDirs.
     auto p3 = get();
     ASSERT_EQ(p2,p3);
 }
-
-// Test ODM manifest + APEX
-TEST_F(DeviceManifestTest, ApexCombine3) {
-    noVendorManifest();
-    expectOdmManifest(true);  // Create device manifest twice.
-
-    setupApex();
-    auto p = get();
-    ASSERT_NE(nullptr, p);
-    EXPECT_FALSE(containsVendorEtcManifest(p));
-    EXPECT_TRUE(vendorEtcManifestOverridden(p));
-    EXPECT_TRUE(containsOdmManifest(p));
-    EXPECT_FALSE(containsVendorManifest(p));
-
-    EXPECT_FALSE(containsApexManifest(p));
-
-    // Second call should create new maninfest containing APEX info.
-    auto p2 = get();
-    ASSERT_NE(nullptr, p2);
-    EXPECT_FALSE(containsVendorEtcManifest(p2));
-    EXPECT_TRUE(vendorEtcManifestOverridden(p2));
-    EXPECT_TRUE(containsOdmManifest(p2));
-    EXPECT_FALSE(containsVendorManifest(p2));
-
-    EXPECT_TRUE(containsApexManifest(p2));
-
-    // Third call expect no update and no call to DeviceVintfDirs.
-    auto p3 = get();
-    ASSERT_EQ(p2,p3);
-}
-
-// Test /vendor/manifest.xml + APEX
-TEST_F(DeviceManifestTest, ApexCombine4) {
-    noVendorManifest();
-    noOdmManifest();
-    expectFetchRepeatedly(kVendorLegacyManifest, vendorManifest);
-    setupApex();
-    auto p = get();
-    ASSERT_NE(nullptr, p);
-    EXPECT_FALSE(containsVendorEtcManifest(p));
-    EXPECT_TRUE(vendorEtcManifestOverridden(p));
-    EXPECT_FALSE(containsOdmManifest(p));
-    EXPECT_TRUE(containsVendorManifest(p));
-
-    EXPECT_FALSE(containsApexManifest(p));
-
-    // Second call should create new maninfest containing APEX info.
-    auto p2 = get();
-    ASSERT_NE(nullptr, p2);
-    ASSERT_NE(p, p2);
-    EXPECT_FALSE(containsVendorEtcManifest(p2));
-    EXPECT_TRUE(vendorEtcManifestOverridden(p2));
-    EXPECT_FALSE(containsOdmManifest(p2));
-    EXPECT_TRUE(containsVendorManifest(p2));
-
-    EXPECT_TRUE(containsApexManifest(p2));
-
-    // Third call expect no update and no call to DeviceVintfDirs.
-    auto p3 = get();
-    ASSERT_EQ(p2,p3);
-}
-
 
 // Tests for valid/invalid APEX defined HAL
 // For a HAL to be defined within an APEX it must not have
@@ -1176,7 +1004,7 @@ TEST_F(DeviceManifestTest, ApexCombine4) {
 TEST_F(DeviceManifestTest, ValidApexHal) {
     expectVendorManifest();
     noOdmManifest();
-    SetUpApex(apexHalManifest);
+    expectApex();
     auto p = get();
     ASSERT_NE(nullptr, p);
     // HALs defined in APEX should set updatable-via-apex
@@ -1202,7 +1030,7 @@ TEST_F(DeviceManifestTest, InvalidApexHal) {
         "</manifest>\n";
     expectVendorManifest();
     noOdmManifest();
-    SetUpApex(apexInvalidManifest);
+    expectApex(apexInvalidManifest);
     auto p = get();
     ASSERT_EQ(nullptr, p);
 }
@@ -1294,7 +1122,7 @@ class OdmManifestTest : public VintfObjectTestBase,
         expectNeverFetch(kVendorLegacyManifest);
         // Assume no files exist under /odm/ unless otherwise specified.
         expectFileNotExist(StartsWith("/odm/"));
-
+        noApex();
         // set SKU
         productModel = GetParam();
         ON_CALL(propertyFetcher(), getProperty("ro.boot.product.hardware.sku", _))
