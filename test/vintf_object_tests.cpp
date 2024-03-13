@@ -2039,7 +2039,8 @@ using FrameworkManifestTestParam =
                bool /* Existence of /product/etc/vintf/manifest.xml */,
                bool /* Existence of /product/etc/vintf/manifest/fragment.xml */,
                bool /* Existence of /system_ext/etc/vintf/manifest.xml */,
-               bool /* Existence of /system_ext/etc/vintf/manifest/fragment.xml */>;
+               bool /* Existence of /system_ext/etc/vintf/manifest/fragment.xml */,
+               bool /* Existence of /apex/com.system/etc/vintf/manifest.xml */>;
 class FrameworkManifestTest : public VintfObjectTestBase,
                               public ::testing::WithParamInterface<FrameworkManifestTestParam> {
    protected:
@@ -2078,6 +2079,28 @@ class FrameworkManifestTest : public VintfObjectTestBase,
                   contains)
             << interface << " should " << (contains ? "" : "not ") << "exist.";
     }
+
+    void expectApex() {
+        expectFetchRepeatedly(kApexInfoFile, R"(
+            <apex-info-list>
+                <apex-info
+                    moduleName="com.system"
+                    preinstalledModulePath="/system/apex/com.system.apex"
+                    isActive="true"/>
+            </apex-info-list>)");
+        EXPECT_CALL(fetcher(), modifiedTime(kApexInfoFile, _, _))
+            .WillRepeatedly(Invoke([](auto, TimeSpec* out, auto){
+                *out = {};
+                return ::android::OK;
+            }))
+            ;
+        EXPECT_CALL(fetcher(), listFiles("/apex/com.system/etc/vintf/", _, _))
+            .WillRepeatedly(Invoke([](auto, std::vector<std::string>* out, auto){
+                *out = {"manifest.xml"};
+                return ::android::OK;
+            }));
+        expectManifest("/apex/com.system/etc/vintf/manifest.xml", "ISystemApex", true);
+    }
 };
 
 TEST_P(FrameworkManifestTest, Existence) {
@@ -2091,6 +2114,9 @@ TEST_P(FrameworkManifestTest, Existence) {
     expectFragment(kProductManifestFragmentDir, "IProductEtcFragment", std::get<3>(GetParam()));
     expectManifest(kSystemExtManifest, "ISystemExtEtc", std::get<4>(GetParam()));
     expectFragment(kSystemExtManifestFragmentDir, "ISystemExtEtcFragment", std::get<5>(GetParam()));
+    if (std::get<6>(GetParam())) {
+        expectApex();
+    }
 
     if (!std::get<0>(GetParam())) {
         EXPECT_EQ(nullptr, vintfObject->getFrameworkHalManifest())
@@ -2103,10 +2129,11 @@ TEST_P(FrameworkManifestTest, Existence) {
         expectContainsInterface("IProductEtcFragment", std::get<3>(GetParam()));
         expectContainsInterface("ISystemExtEtc", std::get<4>(GetParam()));
         expectContainsInterface("ISystemExtEtcFragment", std::get<5>(GetParam()));
+        expectContainsInterface("ISystemApex", std::get<6>(GetParam()));
     }
 }
 INSTANTIATE_TEST_SUITE_P(Vintf, FrameworkManifestTest,
-                         ::testing::Combine(Bool(), Bool(), Bool(), Bool(), Bool(), Bool()));
+                         ::testing::Combine(Bool(), Bool(), Bool(), Bool(), Bool(), Bool(), Bool()));
 
 // clang-format on
 
