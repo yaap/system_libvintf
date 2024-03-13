@@ -26,6 +26,15 @@
 #include <vintf/RuntimeInfo.h>
 #include <vintf/parse_xml.h>
 
+// Equility operators for TimeSpec in FileSystem.h
+
+inline bool operator==(const TimeSpec& a, const TimeSpec& b) {
+    return a.tv_sec == b.tv_sec && a.tv_nsec == b.tv_nsec;
+}
+inline bool operator!=(const TimeSpec& a, const TimeSpec& b) {
+    return !(a == b);
+}
+
 namespace android {
 namespace vintf {
 namespace details {

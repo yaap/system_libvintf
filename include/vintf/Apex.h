@@ -23,34 +23,10 @@
 #include <string>
 #include <vector>
 
-namespace android {
-namespace vintf {
+namespace android::vintf::apex {
 
-// APEX VINTF interface
-class ApexInterface {
-   public:
-    virtual ~ApexInterface() = default;
-    // Check if there is an update for the given type of APEX files in the system
-    virtual bool HasUpdate(FileSystem* fileSystem, PropertyFetcher* propertyFetcher) const = 0;
-    // Get device VINTF directories
-    virtual status_t DeviceVintfDirs(FileSystem* fileSystem, PropertyFetcher* propertyFetcher,
-                                     std::vector<std::string>* out, std::string* error) = 0;
-};
+std::optional<TimeSpec> GetModifiedTime(FileSystem* fileSystem, PropertyFetcher* propertyFetcher);
+status_t GetDeviceVintfDirs(FileSystem* fileSystem, PropertyFetcher* propertyFetcher,
+                            std::vector<std::string>* out, std::string* error);
 
-namespace details {
-
-// Provide default implementation for ApexInterface
-class Apex : public ApexInterface {
-   public:
-    Apex() = default;
-    bool HasUpdate(FileSystem* fileSystem, PropertyFetcher* propertyFetcher) const override;
-    status_t DeviceVintfDirs(FileSystem* fileSystem, PropertyFetcher* propertyFetcher,
-                             std::vector<std::string>* out, std::string* error) override;
-
-   private:
-    std::optional<TimeSpec> mtime_;
-};
-
-}  // namespace details
-}  // namespace vintf
-}  // namespace android
+}  // namespace android::vintf::apex
