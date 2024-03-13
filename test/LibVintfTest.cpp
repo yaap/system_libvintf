@@ -1584,10 +1584,10 @@ TEST_F(LibVintfTest, FullCompat) {
 TEST_F(LibVintfTest, ApexInterfaceShouldBeOkayWithoutApexInfoList) {
     details::FileSystemNoOp fs;
     details::PropertyFetcherNoOp pf;
-    details::Apex apex;
-    ASSERT_FALSE(apex.HasUpdate(&fs, &pf));
+    EXPECT_THAT(apex::GetModifiedTime(&fs, &pf), std::nullopt);
     std::vector<std::string> dirs;
-    ASSERT_EQ(OK, apex.DeviceVintfDirs(&fs, &pf, &dirs, nullptr));
+    ASSERT_EQ(OK, apex::GetDeviceVintfDirs(&fs, &pf, &dirs, nullptr));
+    ASSERT_EQ(dirs, std::vector<std::string>{});
 }
 
 struct NativeHalCompatTestParam {

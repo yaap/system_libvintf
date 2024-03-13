@@ -91,14 +91,6 @@ class MockPropertyFetcher : public PropertyFetcher {
     MOCK_CONST_METHOD3(getUintProperty, uint64_t(const std::string&, uint64_t, uint64_t));
 };
 
-class MockApex : public ApexInterface {
-   public:
-    MockApex() = default;
-    MOCK_CONST_METHOD2(HasUpdate, bool(FileSystem*, PropertyFetcher*));
-    MOCK_METHOD4(DeviceVintfDirs,
-                 status_t(FileSystem*, PropertyFetcher*, std::vector<std::string>*, std::string*));
-};
-
 }  // namespace details
 }  // namespace vintf
 }  // namespace android
