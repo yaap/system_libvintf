@@ -52,7 +52,7 @@ template <typename T>
 struct LockedSharedPtr {
     std::shared_ptr<T> object;
     std::mutex mutex;
-    std::optional<TimeSpec> lastModified;
+    std::optional<timespec> lastModified;
 };
 
 struct LockedRuntimeInfoCache {

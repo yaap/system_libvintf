@@ -64,7 +64,7 @@ status_t FileSystemImpl::listFiles(const std::string& path, std::vector<std::str
     return -saved_errno;
 }
 
-status_t FileSystemImpl::modifiedTime(const std::string& path, TimeSpec* mtime,
+status_t FileSystemImpl::modifiedTime(const std::string& path, timespec* mtime,
                                       std::string* error) const {
     struct stat stat_buf;
     if (stat(path.c_str(), &stat_buf) != 0) {
@@ -87,7 +87,7 @@ status_t FileSystemNoOp::listFiles(const std::string&, std::vector<std::string>*
     return NAME_NOT_FOUND;
 }
 
-status_t FileSystemNoOp::modifiedTime(const std::string&, TimeSpec*, std::string*) const {
+status_t FileSystemNoOp::modifiedTime(const std::string&, timespec*, std::string*) const {
     return NAME_NOT_FOUND;
 }
 
@@ -108,7 +108,7 @@ status_t FileSystemUnderPath::listFiles(const std::string& path, std::vector<std
     return mImpl.listFiles(mRootDir + path, out, error);
 }
 
-status_t FileSystemUnderPath::modifiedTime(const std::string& path, TimeSpec* mtime,
+status_t FileSystemUnderPath::modifiedTime(const std::string& path, timespec* mtime,
                                            std::string* error) const {
     return mImpl.modifiedTime(mRootDir + path, mtime, error);
 }
@@ -145,7 +145,7 @@ status_t PathReplacingFileSystem::listFiles(const std::string& path, std::vector
     return impl_->listFiles(path_replace(path), out, error);
 }
 
-status_t PathReplacingFileSystem::modifiedTime(const std::string& path, TimeSpec* mtime,
+status_t PathReplacingFileSystem::modifiedTime(const std::string& path, timespec* mtime,
                                                std::string* error) const {
     return impl_->modifiedTime(path_replace(path), mtime, error);
 }

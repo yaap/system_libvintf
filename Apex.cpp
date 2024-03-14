@@ -81,13 +81,13 @@ static status_t GetVintfDirs(FileSystem* fileSystem, PropertyFetcher* propertyFe
     return OK;
 }
 
-std::optional<TimeSpec> GetModifiedTime(FileSystem* fileSystem, PropertyFetcher* propertyFetcher) {
+std::optional<timespec> GetModifiedTime(FileSystem* fileSystem, PropertyFetcher* propertyFetcher) {
     std::string apexInfoFile = details::kApexInfoFile;
     if (!isApexReady(propertyFetcher)) {
         apexInfoFile = details::kBootstrapApexInfoFile;
     }
 
-    TimeSpec mtime{};
+    timespec mtime{};
     std::string error;
     status_t status = fileSystem->modifiedTime(apexInfoFile, &mtime, &error);
     if (status == NAME_NOT_FOUND) {

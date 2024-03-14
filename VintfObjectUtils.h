@@ -32,7 +32,7 @@ namespace details {
 // can refer to the "last modified" timestamp of the data source.
 template <typename T, typename F>
 std::shared_ptr<const T> Get(const char* id, LockedSharedPtr<T>* ptr, const F& fetch,
-                             const std::optional<TimeSpec>& lastModified = std::nullopt) {
+                             const std::optional<timespec>& lastModified = std::nullopt) {
     std::unique_lock<std::mutex> lock(ptr->mutex);
     // Check if the last fetched data is fresh. If it's old, re-fetch the data
     // with the new timestamp.
