@@ -884,12 +884,12 @@ class DeviceManifestTest : public VintfObjectTestBase {
                 preinstalledModulePath="/vendor/apex/com.novintf.apex" isActive="true"/>
         </apex-info-list>)");
         EXPECT_CALL(fetcher(), modifiedTime(kApexInfoFile, _, _))
-            .WillOnce(Invoke([](auto, TimeSpec* out, auto){
+            .WillOnce(Invoke([](auto, timespec* out, auto){
                 *out = {};
                 return ::android::OK;
             }))
             // Update once, but no more.
-            .WillRepeatedly(Invoke([](auto, TimeSpec* out, auto){
+            .WillRepeatedly(Invoke([](auto, timespec* out, auto){
                 *out = {1,};
                 return ::android::OK;
             }))
@@ -2089,7 +2089,7 @@ class FrameworkManifestTest : public VintfObjectTestBase,
                     isActive="true"/>
             </apex-info-list>)");
         EXPECT_CALL(fetcher(), modifiedTime(kApexInfoFile, _, _))
-            .WillRepeatedly(Invoke([](auto, TimeSpec* out, auto){
+            .WillRepeatedly(Invoke([](auto, timespec* out, auto){
                 *out = {};
                 return ::android::OK;
             }))
