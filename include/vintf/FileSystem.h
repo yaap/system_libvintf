@@ -26,8 +26,6 @@
 
 #include <utils/Errors.h>
 
-using TimeSpec = struct timespec;
-
 namespace android {
 namespace vintf {
 
@@ -49,7 +47,7 @@ class FileSystem {
                                std::string* error) const = 0;
     // Return NAME_NOT_FOUND if file is not found,
     //        OK if "mtime" is set with modified time of the file.
-    virtual status_t modifiedTime(const std::string& path, TimeSpec* mtime,
+    virtual status_t modifiedTime(const std::string& path, timespec* mtime,
                                   std::string* error) const = 0;
 };
 
@@ -70,7 +68,7 @@ class FileSystemImpl : public FileSystem {
    public:
     status_t fetch(const std::string&, std::string*, std::string*) const override;
     status_t listFiles(const std::string&, std::vector<std::string>*, std::string*) const override;
-    status_t modifiedTime(const std::string& path, TimeSpec* mtime, std::string* error) const;
+    status_t modifiedTime(const std::string& path, timespec* mtime, std::string* error) const;
 };
 
 // Class that does nothing.
@@ -78,7 +76,7 @@ class FileSystemNoOp : public FileSystem {
    public:
     status_t fetch(const std::string&, std::string*, std::string*) const override;
     status_t listFiles(const std::string&, std::vector<std::string>*, std::string*) const override;
-    status_t modifiedTime(const std::string& path, TimeSpec* mtime,
+    status_t modifiedTime(const std::string& path, timespec* mtime,
                           std::string* error) const override;
 };
 
@@ -90,7 +88,7 @@ class FileSystemUnderPath : public FileSystem {
                    std::string* error) const override;
     status_t listFiles(const std::string& path, std::vector<std::string>* out,
                        std::string* error) const override;
-    status_t modifiedTime(const std::string& path, TimeSpec* mtime,
+    status_t modifiedTime(const std::string& path, timespec* mtime,
                           std::string* error) const override;
 
    protected:
@@ -113,7 +111,7 @@ class PathReplacingFileSystem : public FileSystem {
                    std::string* error) const override;
     status_t listFiles(const std::string& path, std::vector<std::string>* out,
                        std::string* error) const override;
-    status_t modifiedTime(const std::string& path, TimeSpec* mtime,
+    status_t modifiedTime(const std::string& path, timespec* mtime,
                           std::string* error) const override;
 
    private:
