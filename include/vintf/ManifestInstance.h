@@ -38,9 +38,11 @@ class ManifestInstance {
 
     using VersionType = Version;
     ManifestInstance(FqInstance&& fqInstance, TransportArch&& ta, HalFormat fmt,
-                     std::optional<std::string>&& updatableViaApex);
+                     std::optional<std::string>&& updatableViaApex,
+                     std::optional<std::string>&& accessor);
     ManifestInstance(const FqInstance& fqInstance, const TransportArch& ta, HalFormat fmt,
-                     const std::optional<std::string>& updatableViaApex);
+                     const std::optional<std::string>& updatableViaApex,
+                     const std::optional<std::string>& accessor);
     const std::string& package() const;
     Version version() const;
     std::string interface() const;
@@ -48,6 +50,7 @@ class ManifestInstance {
     Transport transport() const;
     Arch arch() const;
     HalFormat format() const;
+    const std::optional<std::string>& accessor() const;
     const std::optional<std::string>& updatableViaApex() const;
     const std::optional<std::string> ip() const;
     const std::optional<uint64_t> port() const;
@@ -81,6 +84,7 @@ class ManifestInstance {
     TransportArch mTransportArch;
     HalFormat mHalFormat;
     std::optional<std::string> mUpdatableViaApex;
+    std::optional<std::string> mAccessor;
 };
 
 }  // namespace vintf
