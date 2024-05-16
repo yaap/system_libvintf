@@ -17,9 +17,11 @@
 #include <getopt.h>
 
 #include <android-base/strings.h>
+#include <json/json.h>
 #include <vintf/VintfObject.h>
 #include <vintf/parse_string.h>
 #include <vintf/parse_xml.h>
+
 #include <iomanip>
 #include <iostream>
 #include <string>
@@ -399,7 +401,22 @@ void dumpFcm(const ParsedOptions&) {
     if (fcm != nullptr) std::cout << toXml(*fcm);
 }
 
-void dumpRi(const ParsedOptions& options) {
-    auto ri = VintfObject::GetRuntimeInfo();
-    if (ri != nullptr) std::cout << dump(*ri, options.verbose);
+// Keep field names in sync with VintfDeviceInfo's usage
+void dumpRi(const ParsedOptions&) {
+    const RuntimeInfo::FetchFlags flags = RuntimeInfo::FetchFlag::CPU_INFO |
+                                          RuntimeInfo::FetchFlag::CPU_VERSION |
+                                          RuntimeInfo::FetchFlag::POLICYVERS;
+
+    auto ri = VintfObject::GetRuntimeInfo(flags);
+    if (ri != nullptr) {
+        Json::Value root;
+        root["cpu_info"] = ri->cpuInfo();
+        root["os_name"] = ri->osName();
+        root["node_name"] = ri->nodeName();
+        root["os_release"] = ri->osRelease();
+        root["os_version"] = ri->osVersion();
+        root["hardware_id"] = ri->hardwareId();
+        root["kernel_version"] = to_string(ri->kernelVersion());
+        std::cout << root << '\n';
+    }
 }

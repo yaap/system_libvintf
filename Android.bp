@@ -151,6 +151,7 @@ cc_binary {
     defaults: ["libvintf-defaults"],
     shared_libs: [
         "libbase",
+        "libjsoncpp",
         "libvintf",
     ],
     srcs: [
