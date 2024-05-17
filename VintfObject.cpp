@@ -98,6 +98,7 @@ static bool isAllowedToUseLibvintf() {
         "/system/bin/app_process64",
         // These aren't daemons so the memory impact is less concerning.
         "/system/bin/lshal",
+        "/system/bin/vintf",
     };
 
     return std::find(allowedBinaries.begin(), allowedBinaries.end(), execPath) !=
