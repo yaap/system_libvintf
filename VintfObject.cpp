@@ -278,17 +278,6 @@ status_t VintfObject::addDirectoriesManifests(const std::vector<std::string>& di
     return OK;
 }
 
-// Create device HalManifest
-// 1. Create manifest based on /vendor /odm data
-// 2. Add any APEX data
-status_t VintfObject::fetchDeviceHalManifest(HalManifest* out, std::string* error) {
-    auto status = fetchDeviceHalManifestMinusApex(out, error);
-    if (status != OK) {
-        return status;
-    }
-    return fetchDeviceHalManifestApex(out, error);
-}
-
 // Fetch fragments from apexes originated from /vendor.
 // For now, we don't have /odm apexes.
 status_t VintfObject::fetchDeviceHalManifestApex(HalManifest* out, std::string* error) {
@@ -302,14 +291,14 @@ status_t VintfObject::fetchDeviceHalManifestApex(HalManifest* out, std::string* 
 }
 
 // Priority for loading vendor manifest:
-// 1. Vendor manifest + device fragments + ODM manifest (optional) + odm fragments
-// 2. Vendor manifest + device fragments
+// 1. Vendor manifest + device fragments (including vapex) + ODM manifest (optional) + odm fragments
+// 2. Vendor manifest + device fragments (including vapex)
 // 3. ODM manifest (optional) + odm fragments
 // 4. /vendor/manifest.xml (legacy, no fragments)
 // where:
 // A + B means unioning <hal> tags from A and B. If B declares an override, then this takes priority
 // over A.
-status_t VintfObject::fetchDeviceHalManifestMinusApex(HalManifest* out, std::string* error) {
+status_t VintfObject::fetchDeviceHalManifest(HalManifest* out, std::string* error) {
     HalManifest vendorManifest;
     status_t vendorStatus = fetchVendorHalManifest(&vendorManifest, error);
     if (vendorStatus != OK && vendorStatus != NAME_NOT_FOUND) {
@@ -322,6 +311,11 @@ status_t VintfObject::fetchDeviceHalManifestMinusApex(HalManifest* out, std::str
                                                         false /* forceSchemaType*/, error);
         if (fragmentStatus != OK) {
             return fragmentStatus;
+        }
+
+        status_t apexStatus = fetchDeviceHalManifestApex(out, error);
+        if (apexStatus != OK) {
+            return apexStatus;
         }
     }
 
