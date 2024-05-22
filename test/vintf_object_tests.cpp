@@ -1170,6 +1170,125 @@ TEST_P(OdmManifestTest, OdmLegacyManifest) {
 
 INSTANTIATE_TEST_SUITE_P(OdmManifest, OdmManifestTest, ::testing::Values("", "fake_sku"));
 
+struct ManifestOverrideTest : public VintfObjectTestBase {
+  protected:
+    void SetUp() override {
+        VintfObjectTestBase::SetUp();
+        ON_CALL(fetcher(), fetch(_, _))
+            .WillByDefault(Invoke([&](auto path, std::string& out) {
+                auto dirIt = dirs_.find(base::Dirname(path) + "/");
+                if (dirIt != dirs_.end()) {
+                    auto fileIt = dirIt->second.find(base::Basename(path));
+                    if (fileIt != dirIt->second.end()) {
+                        out = fileIt->second;
+                        return OK;
+                    }
+                }
+                return NAME_NOT_FOUND;
+            }));
+        ON_CALL(fetcher(), listFiles(_, _, _))
+            .WillByDefault(Invoke([&](auto path, std::vector<std::string>* out, auto) {
+                auto dirIt = dirs_.find(path);
+                if (dirIt != dirs_.end()) {
+                    for (const auto& [f, _]: dirIt->second) {
+                        out->push_back(f);
+                    }
+                    return OK;
+                }
+                return NAME_NOT_FOUND;
+            }));
+    }
+    void expect(std::string path, std::string content) {
+        dirs_[base::Dirname(path) + "/"][base::Basename(path)] = content;
+    }
+  private:
+    std::map<std::string, std::map<std::string, std::string>> dirs_;
+};
+
+TEST_F(ManifestOverrideTest, NoOverrideForVendor) {
+    expect(kVendorManifest,
+        "<manifest " + kMetaVersionStr + " type=\"device\">"
+        "  <hal format=\"aidl\">"
+        "    <name>android.hardware.foo</name>"
+        "    <fqname>IFoo/default</fqname>"
+        "  </hal>"
+        "</manifest>");
+    auto p = vintfObject->getDeviceHalManifest();
+    ASSERT_NE(nullptr, p);
+    ASSERT_EQ(p->getAidlInstances("android.hardware.foo", "IFoo"),
+        std::set<std::string>({"default"}));
+}
+
+TEST_F(ManifestOverrideTest, OdmOverridesVendor) {
+    expect(kVendorManifest, "<manifest " + kMetaVersionStr + " type=\"device\">"
+        "  <hal format=\"aidl\">"
+        "    <name>android.hardware.foo</name>"
+        "    <fqname>IFoo/default</fqname>"
+        "  </hal>"
+        "</manifest>");
+    // ODM overrides(disables) HAL in Vendor
+    expect(kOdmManifest, "<manifest " + kMetaVersionStr + " type=\"device\">"
+        "  <hal override=\"true\" format=\"aidl\">"
+        "    <name>android.hardware.foo</name>"
+        "  </hal>"
+        "</manifest>");
+    auto p = vintfObject->getDeviceHalManifest();
+    ASSERT_NE(nullptr, p);
+    ASSERT_EQ(p->getAidlInstances("android.hardware.foo", "IFoo"), std::set<std::string>({}));
+}
+
+TEST_F(ManifestOverrideTest, NoOverrideForVendorApex) {
+    expect(kVendorManifest,
+        "<manifest " + kMetaVersionStr + " type=\"device\" />");
+    expect(kApexInfoFile,
+        R"(<apex-info-list>
+          <apex-info
+            moduleName="com.android.foo"
+            preinstalledModulePath="/vendor/apex/com.android.foo.apex"
+            isActive="true"/>
+        </apex-info-list>)");
+    expect("/apex/com.android.foo/etc/vintf/foo.xml",
+        "<manifest " + kMetaVersionStr + "type=\"device\">"
+        "  <hal format=\"aidl\">"
+        "    <name>android.hardware.foo</name>"
+        "    <fqname>IFoo/default</fqname>"
+        "  </hal>"
+        "</manifest>");
+    auto p = vintfObject->getDeviceHalManifest();
+    ASSERT_NE(nullptr, p);
+    ASSERT_EQ(p->getAidlInstances("android.hardware.foo", "IFoo"),
+        std::set<std::string>({"default"}));
+}
+
+TEST_F(ManifestOverrideTest, OdmOverridesVendorApex) {
+    expect(kVendorManifest,
+        "<manifest " + kMetaVersionStr + " type=\"device\" />");
+    expect(kApexInfoFile,
+        R"(<apex-info-list>
+            <apex-info
+                moduleName="com.android.foo"
+                preinstalledModulePath="/vendor/apex/com.android.foo.apex"
+                isActive="true"/>
+            </apex-info-list>)");
+    expect("/apex/com.android.foo/etc/vintf/foo.xml",
+        "<manifest " + kMetaVersionStr + "type=\"device\">"
+        "  <hal format=\"aidl\">"
+        "    <name>android.hardware.foo</name>"
+        "    <fqname>IFoo/default</fqname>"
+        "  </hal>"
+        "</manifest>");
+    // ODM overrides(disables) HAL in Vendor APEX
+    expect(kOdmManifest, "<manifest " + kMetaVersionStr + " type=\"device\">"
+        "  <hal override=\"true\" format=\"aidl\">"
+        "    <name>android.hardware.foo</name>"
+        "  </hal>"
+        "</manifest>");
+    auto p = vintfObject->getDeviceHalManifest();
+    ASSERT_NE(nullptr, p);
+    ASSERT_EQ(p->getAidlInstances("android.hardware.foo", "IFoo"),
+        std::set<std::string>({}));
+}
+
 struct CheckedFqInstance : FqInstance {
     CheckedFqInstance(const char* s) : CheckedFqInstance(std::string(s)) {}
     CheckedFqInstance(const std::string& s) { CHECK(setTo(s)) << s; }
