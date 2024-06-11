@@ -122,7 +122,6 @@ cc_test_host {
     name: "libvintffm_test",
     defaults: ["libvintffm-defaults"],
     static_libs: [
-        "libc++fs",
         "libgmock",
         "libvintffm",
     ],
