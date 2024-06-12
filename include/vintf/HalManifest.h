@@ -111,7 +111,7 @@ struct HalManifest : public HalGroup<ManifestHal>,
 
     // device.mSepolicyVersion. Assume type == device.
     // Abort if type != device.
-    const Version &sepolicyVersion() const;
+    const SepolicyVersion& sepolicyVersion() const;
 
     // framework.mVendorNdks. Assume type == framework.
     // Abort if type != framework.
@@ -130,6 +130,7 @@ struct HalManifest : public HalGroup<ManifestHal>,
                                            const std::string& interfaceName) const;
     std::set<std::string> getAidlInstances(const std::string& package,
                                            const std::string& interfaceName) const;
+    std::set<std::string> getNativeInstances(const std::string& package) const;
 
     // Return whether instance is in getHidlInstances(...).
     bool hasHidlInstance(const std::string& package, const Version& version,
@@ -142,6 +143,9 @@ struct HalManifest : public HalGroup<ManifestHal>,
     // Return whether a given AIDL instance is in this manifest with any version.
     bool hasAidlInstance(const std::string& package, const std::string& interfaceName,
                          const std::string& instance) const;
+
+    // Return whether a given native instance is in getNativeInstances(...).
+    bool hasNativeInstance(const std::string& package, const std::string& instance) const;
 
     // Insert the given instance. After inserting it, the instance will be available via
     // forEachInstance* functions. This modifies the manifest.
@@ -161,6 +165,9 @@ struct HalManifest : public HalGroup<ManifestHal>,
     bool forEachInstanceOfVersion(
         HalFormat format, const std::string& package, const Version& expectVersion,
         const std::function<bool(const ManifestInstance&)>& func) const override;
+
+    bool forEachNativeInstance(const std::string& package,
+                               const std::function<bool(const ManifestInstance&)>& func) const;
 
    private:
     friend struct HalManifestConverter;
@@ -242,7 +249,7 @@ struct HalManifest : public HalGroup<ManifestHal>,
 
     // entries for device hal manifest only
     struct {
-        Version mSepolicyVersion;
+        SepolicyVersion mSepolicyVersion;
         std::optional<KernelInfo> mKernel;
     } device;
 

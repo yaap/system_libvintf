@@ -485,6 +485,13 @@ class AssembleVintfImpl : public AssembleVintf {
                 if (!isInMetadata(hal, metadata)) continue;
                 foundMetadata = true;
                 if (!metadata.has_development) continue;
+                if (metadata.use_unfrozen) {
+                    err() << "INFO: " << hal.getName()
+                          << " is explicitly marked to use unfrozen version, so it will not be "
+                             "downgraded. If this interface is used, it will fail "
+                             "vts_treble_vintf_vendor_test.";
+                    continue;
+                }
 
                 auto it = std::max_element(metadata.versions.begin(), metadata.versions.end());
                 if (it == metadata.versions.end()) {
@@ -583,8 +590,9 @@ class AssembleVintfImpl : public AssembleVintf {
                 return false;
             }
 
-            if (!setDeviceFcmVersion(halManifest)) {
-                return false;
+            if (!getBooleanFlag("VINTF_IGNORE_TARGET_FCM_VERSION") &&
+                !getBooleanFlag("PRODUCT_ENFORCE_VINTF_MANIFEST")) {
+                halManifest->mLevel = Level::LEGACY;
             }
 
             if (!setDeviceManifestKernel(halManifest)) {
@@ -671,52 +679,6 @@ class AssembleVintfImpl : public AssembleVintf {
         return true;
     }
 
-    bool setDeviceFcmVersion(HalManifest* manifest) {
-        // Not needed for generating empty manifest for DEVICE_FRAMEWORK_COMPATIBILITY_MATRIX_FILE.
-        if (getBooleanFlag("VINTF_IGNORE_TARGET_FCM_VERSION")) {
-            return true;
-        }
-
-        size_t shippingApiLevel = getIntegerFlag("PRODUCT_SHIPPING_API_LEVEL");
-
-        if (manifest->level() != Level::UNSPECIFIED) {
-            if (shippingApiLevel != 0) {
-                auto res = android::vintf::testing::TestTargetFcmVersion(manifest->level(),
-                                                                         shippingApiLevel);
-                if (!res.ok()) err() << "Warning: " << res.error() << std::endl;
-            }
-            return true;
-        }
-        if (!getBooleanFlag("PRODUCT_ENFORCE_VINTF_MANIFEST")) {
-            manifest->mLevel = Level::LEGACY;
-            return true;
-        }
-        // TODO(b/70628538): Do not infer from Shipping API level.
-        if (shippingApiLevel) {
-            err() << "Warning: Shipping FCM Version is inferred from Shipping API level. "
-                  << "Declare Shipping FCM Version in device manifest directly." << std::endl;
-            manifest->mLevel = details::convertFromApiLevel(shippingApiLevel);
-            if (manifest->mLevel == Level::UNSPECIFIED) {
-                err() << "Error: Shipping FCM Version cannot be inferred from Shipping API "
-                      << "level " << shippingApiLevel << "."
-                      << "Declare Shipping FCM Version in device manifest directly." << std::endl;
-                return false;
-            }
-            return true;
-        }
-        // TODO(b/69638851): should be an error if Shipping API level is not defined.
-        // For now, just leave it empty; when framework compatibility matrix is built,
-        // lowest FCM Version is assumed.
-        err() << "Warning: Shipping FCM Version cannot be inferred, because:" << std::endl
-              << "    (1) It is not explicitly declared in device manifest;" << std::endl
-              << "    (2) PRODUCT_ENFORCE_VINTF_MANIFEST is set to true;" << std::endl
-              << "    (3) PRODUCT_SHIPPING_API_LEVEL is undefined." << std::endl
-              << "Assuming 'unspecified' Shipping FCM Version. " << std::endl
-              << "To remove this warning, define 'level' attribute in device manifest."
-              << std::endl;
-        return true;
-    }
-
     Level getLowestFcmVersion(const CompatibilityMatrices& matrices) {
         Level ret = Level::UNSPECIFIED;
         for (const auto& e : matrices) {
@@ -795,14 +757,14 @@ class AssembleVintfImpl : public AssembleVintf {
             }
 
             // Add PLATFORM_SEPOLICY_* to sepolicy.sepolicy-version. Remove dupes.
-            std::set<Version> sepolicyVersions;
+            std::set<SepolicyVersion> sepolicyVersions;
             auto sepolicyVersionStrings = getEnvList("PLATFORM_SEPOLICY_COMPAT_VERSIONS");
             auto currentSepolicyVersionString = getEnv("PLATFORM_SEPOLICY_VERSION");
             if (!currentSepolicyVersionString.empty()) {
                 sepolicyVersionStrings.push_back(currentSepolicyVersionString);
             }
             for (auto&& s : sepolicyVersionStrings) {
-                Version v;
+                SepolicyVersion v;
                 if (!parse(s, &v)) {
                     err() << "Error: unknown sepolicy version '" << s << "' specified by "
                           << (s == currentSepolicyVersionString

@@ -35,12 +35,12 @@ struct Sepolicy {
 
     Sepolicy() : Sepolicy(0u, {}) {}
     Sepolicy(KernelSepolicyVersion kernelSepolicyVersion,
-            std::vector<VersionRange> &&sepolicyVersions) :
-            mKernelSepolicyVersion(kernelSepolicyVersion),
-            mSepolicyVersionRanges(std::move(sepolicyVersions)) {}
+             std::vector<SepolicyVersionRange>&& sepolicyVersions)
+        : mKernelSepolicyVersion(kernelSepolicyVersion),
+          mSepolicyVersionRanges(std::move(sepolicyVersions)) {}
 
     inline size_t kernelSepolicyVersion() const { return mKernelSepolicyVersion.value; }
-    inline const std::vector<VersionRange> &sepolicyVersions() const {
+    inline const std::vector<SepolicyVersionRange>& sepolicyVersions() const {
         return mSepolicyVersionRanges;
     }
 
@@ -48,7 +48,7 @@ struct Sepolicy {
     friend class AssembleVintfImpl;
     friend struct SepolicyConverter;
     KernelSepolicyVersion mKernelSepolicyVersion;
-    std::vector<VersionRange> mSepolicyVersionRanges;
+    std::vector<SepolicyVersionRange> mSepolicyVersionRanges;
 };
 
 inline bool operator==(const Sepolicy &lft, const Sepolicy &rgt) {

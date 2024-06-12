@@ -68,7 +68,7 @@ struct CompatibilityMatrix : public HalGroup<MatrixHal>,
 
     std::string getVendorNdkVersion() const;
 
-    std::vector<VersionRange> getSepolicyVersions() const;
+    std::vector<SepolicyVersionRange> getSepolicyVersions() const;
 
     bool add(MatrixHal&&, std::string* error = nullptr);
     // Move all hals from another CompatibilityMatrix to this.
@@ -147,10 +147,6 @@ struct CompatibilityMatrix : public HalGroup<MatrixHal>,
     // matches any <regex-instance> tag.
     bool matchInstance(HalFormat format, const std::string& halName, const Version& version,
                        const std::string& interfaceName, const std::string& instance) const;
-
-    // Return the level of the matrixKernel object that it is originally from.
-    // Prerequisite: matrixKernel is in mKernels.
-    Level getSourceMatrixLevel(const MatrixKernel* matrixKernel) const;
 
     // Return the minlts of the latest <kernel>, or empty value if any error (e.g. this is not an
     // FCM, or there are no <kernel> tags).

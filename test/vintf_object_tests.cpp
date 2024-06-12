@@ -164,7 +164,7 @@ const std::string vendorMatrixXml1 =
 
 const std::string systemMatrixXml2 =
     "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\">\n"
-    "    <hal format=\"hidl\">\n"
+    "    <hal format=\"hidl\" optional=\"false\">\n"
     "        <name>android.hardware.foo</name>\n"
     "        <version>1.0</version>\n"
     "    </hal>\n"
@@ -678,7 +678,7 @@ TEST_F(VintfObjectIncompatibleTest, TestDeviceCompatibility) {
 
 const std::string vendorManifestKernelFcm =
         "<manifest " + kMetaVersionStr + " type=\"device\">\n"
-        "    <kernel version=\"3.18.999\" target-level=\"92\"/>\n"
+        "    <kernel version=\"3.18.999\" target-level=\"8\"/>\n"
         "</manifest>\n";
 
 // Test fixture that provides compatible metadata from the mock device.
@@ -735,13 +735,13 @@ class VintfObjectKernelFcmTest : public VintfObjectTestBase,
         if (isHost) {
             runtimeInfoFactory().getInfo()->failNextFetch();
         } else {
-            runtimeInfoFactory().getInfo()->setNextFetchKernelLevel(Level{92});
+            runtimeInfoFactory().getInfo()->setNextFetchKernelLevel(Level{8});
         }
     }
 
     Level expectedKernelFcm() {
         auto [isHost, hasDeviceManifest] = GetParam();
-        return !isHost || hasDeviceManifest ? Level{92} : Level::UNSPECIFIED;
+        return !isHost || hasDeviceManifest ? Level{8} : Level::UNSPECIFIED;
     }
 };
 
@@ -1632,7 +1632,7 @@ class MultiMatrixTest : public VintfObjectTestBase {
         useEmptyFileSystem();
     }
     static std::string getFileName(size_t i) {
-        return "compatibility_matrix." + std::to_string(static_cast<Level>(i)) + ".xml";
+        return "compatibility_matrix." + to_string(static_cast<Level>(i)) + ".xml";
     }
     void SetUpMockSystemMatrices(const std::vector<std::string>& xmls) {
         SetUpMockMatrices(kSystemVintfDir, xmls);
@@ -1974,10 +1974,10 @@ TEST_F(KernelTest, Compatible) {
         FAKE_KERNEL("2.0.0", "B1", 1)
         "    <sepolicy>\n"
         "        <kernel-sepolicy-version>0</kernel-sepolicy-version>\n"
-        "        <sepolicy-version>0.0</sepolicy-version>\n"
+        "        <sepolicy-version>0</sepolicy-version>\n"
         "    </sepolicy>\n"
         "</compatibility-matrix>\n"});
-    expectKernelFcmVersion(Level{1}, Level{1});
+    expectKernelFcmVersion(1, Level{1});
     expectSystemManifest();
     expectVendorMatrix();
 
@@ -1988,8 +1988,8 @@ TEST_F(KernelTest, Compatible) {
 }
 
 TEST_F(KernelTest, Level) {
-    expectKernelFcmVersion(1, Level{10});
-    EXPECT_EQ(Level{10}, vintfObject->getKernelLevel());
+    expectKernelFcmVersion(1, Level{8});
+    EXPECT_EQ(Level{8}, vintfObject->getKernelLevel());
 }
 
 TEST_F(KernelTest, LevelUnspecified) {
@@ -2005,7 +2005,7 @@ TEST_P(KernelTestP, Test) {
     auto&& [matrices, info, targetFcm, kernelFcm, pass] = GetParam();
 
     SetUpMockSystemMatrices(matrices);
-    expectKernelFcmVersion(targetFcm, kernelFcm);
+    expectKernelFcmVersion(static_cast<size_t>(targetFcm), kernelFcm);
     runtimeInfoFactory().getInfo()->setNextFetchKernelInfo(info.version(), info.configs());
     auto matrix = vintfObject->getFrameworkCompatibilityMatrix();
     auto runtime = vintfObject->getRuntimeInfo();
@@ -2292,18 +2292,18 @@ class FrameworkManifestLevelTest : public VintfObjectTestBase {
         auto tail = "</manifest>";
 
         auto systemManifest =
-            head + getFragment(HalFormat::HIDL, Level::UNSPECIFIED, Level{13}, "@3.0::ISystemEtc") +
-            getFragment(HalFormat::AIDL, Level{13}, Level{14}, "ISystemEtc4") + tail;
+            head + getFragment(HalFormat::HIDL, Level::UNSPECIFIED, Level{6}, "@3.0::ISystemEtc") +
+            getFragment(HalFormat::AIDL, Level{6}, Level{7}, "ISystemEtc4") + tail;
         expectFetch(kSystemManifest, systemManifest);
 
-        auto hidlFragment = head +
-                            getFragment(HalFormat::HIDL, Level::UNSPECIFIED, Level{14},
-                                        "@4.0::ISystemEtcFragment") +
-                            tail;
+        auto hidlFragment =
+            head +
+            getFragment(HalFormat::HIDL, Level::UNSPECIFIED, Level{7}, "@4.0::ISystemEtcFragment") +
+            tail;
         expectFetch(kSystemManifestFragmentDir + "hidl.xml"s, hidlFragment);
 
         auto aidlFragment =
-            head + getFragment(HalFormat::AIDL, Level{12}, Level{13}, "ISystemEtcFragment3") + tail;
+            head + getFragment(HalFormat::AIDL, Level{5}, Level{6}, "ISystemEtcFragment3") + tail;
         expectFetch(kSystemManifestFragmentDir + "aidl.xml"s, aidlFragment);
 
         EXPECT_CALL(fetcher(), listFiles(StrEq(kSystemManifestFragmentDir), _, _))
@@ -2379,40 +2379,40 @@ TEST_F(FrameworkManifestLevelTest, NoTargetFcmVersion) {
     expectContainsAidl("ISystemEtc4", false);
 }
 
-TEST_F(FrameworkManifestLevelTest, TargetFcmVersion11) {
-    expectTargetFcmVersion(11);
+TEST_F(FrameworkManifestLevelTest, TargetFcmVersion4) {
+    expectTargetFcmVersion(4);
     expectContainsHidl({3, 0}, "ISystemEtc");
     expectContainsHidl({4, 0}, "ISystemEtcFragment");
     expectContainsAidl("ISystemEtcFragment3", false);
     expectContainsAidl("ISystemEtc4", false);
 }
 
-TEST_F(FrameworkManifestLevelTest, TargetFcmVersion12) {
-    expectTargetFcmVersion(12);
+TEST_F(FrameworkManifestLevelTest, TargetFcmVersion5) {
+    expectTargetFcmVersion(5);
     expectContainsHidl({3, 0}, "ISystemEtc");
     expectContainsHidl({4, 0}, "ISystemEtcFragment");
     expectContainsAidl("ISystemEtcFragment3");
     expectContainsAidl("ISystemEtc4", false);
 }
 
-TEST_F(FrameworkManifestLevelTest, TargetFcmVersion13) {
-    expectTargetFcmVersion(13);
+TEST_F(FrameworkManifestLevelTest, TargetFcmVersion6) {
+    expectTargetFcmVersion(6);
     expectContainsHidl({3, 0}, "ISystemEtc");
     expectContainsHidl({4, 0}, "ISystemEtcFragment");
     expectContainsAidl("ISystemEtcFragment3");
     expectContainsAidl("ISystemEtc4");
 }
 
-TEST_F(FrameworkManifestLevelTest, TargetFcmVersion14) {
-    expectTargetFcmVersion(14);
+TEST_F(FrameworkManifestLevelTest, TargetFcmVersion7) {
+    expectTargetFcmVersion(7);
     expectContainsHidl({3, 0}, "ISystemEtc", false);
     expectContainsHidl({4, 0}, "ISystemEtcFragment");
     expectContainsAidl("ISystemEtcFragment3", false);
     expectContainsAidl("ISystemEtc4");
 }
 
-TEST_F(FrameworkManifestLevelTest, TargetFcmVersion15) {
-    expectTargetFcmVersion(15);
+TEST_F(FrameworkManifestLevelTest, TargetFcmVersion8) {
+    expectTargetFcmVersion(8);
     expectContainsHidl({3, 0}, "ISystemEtc", false);
     expectContainsHidl({4, 0}, "ISystemEtcFragment", false);
     expectContainsAidl("ISystemEtcFragment3", false);
@@ -2523,7 +2523,7 @@ class CheckMatricesWithHalDefTestBase : public MultiMatrixTest {
         // clang-format off
         std::vector<std::string> matrices{
             "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
-            "    <hal format=\"hidl\">\n"
+            "    <hal format=\"hidl\" optional=\"false\">\n"
             "        <name>android.hardware.hidl</name>\n"
             "        <version>1.0</version>\n"
             "        <interface>\n"
@@ -2531,7 +2531,7 @@ class CheckMatricesWithHalDefTestBase : public MultiMatrixTest {
             "            <instance>default</instance>\n"
             "        </interface>\n"
             "    </hal>\n"
-            "    <hal format=\"aidl\">\n"
+            "    <hal format=\"aidl\" optional=\"false\">\n"
             "        <name>android.hardware.aidl</name>\n"
             "        <interface>\n"
             "            <name>IAidl</name>\n"
