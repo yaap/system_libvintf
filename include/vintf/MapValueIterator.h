@@ -31,18 +31,13 @@ struct MapIterTypes {
 
     // Iterator over all values of a Map
     template<bool is_const>
-    struct IteratorImpl : public std::iterator <
-            std::bidirectional_iterator_tag, /* Category */
-            V,
-            ptrdiff_t, /* Distance */
-            typename std::conditional<is_const, const V *, V *>::type /* Pointer */,
-            typename std::conditional<is_const, const V &, V &>::type /* Reference */
-        >
+    struct IteratorImpl
     {
-        using traits = std::iterator_traits<IteratorImpl>;
-        using ptr_type = typename traits::pointer;
-        using ref_type = typename traits::reference;
-        using diff_type = typename traits::difference_type;
+        using iterator_category = std::bidirectional_iterator_tag;
+        using value_type = V;
+        using difference_type = ptrdiff_t;
+        using pointer = typename std::conditional<is_const, const V *, V *>::type;
+        using reference = typename std::conditional<is_const, const V &, V &>::type;
 
         using map_iter = typename std::conditional<is_const,
                 typename Map::const_iterator, typename Map::iterator>::type;
@@ -67,8 +62,8 @@ struct MapIterTypes {
             mIter--;
             return i;
         }
-        inline ref_type operator*() const  { return mIter->second; }
-        inline ptr_type operator->() const { return &(mIter->second); }
+        inline reference operator*() const  { return mIter->second; }
+        inline pointer operator->() const { return &(mIter->second); }
         inline bool operator==(const IteratorImpl &rhs) const { return mIter == rhs.mIter; }
         inline bool operator!=(const IteratorImpl &rhs) const { return mIter != rhs.mIter; }
 
