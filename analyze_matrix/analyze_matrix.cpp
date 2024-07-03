@@ -90,6 +90,9 @@ std::string GetDescription(Level level) {
             return "Android 14 (U)";
         case Level::V:
             return "Android 15 (V)";
+        case Level::W:
+            // TODO(b/346861728) verify name/number once decided
+            return "Android 16 (W)";
         case Level::UNSPECIFIED:
             return "Level unspecified";
         default:
