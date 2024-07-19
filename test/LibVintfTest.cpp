@@ -6049,6 +6049,21 @@ class AllowDupMajorVersionTest
                 </hal>
             </manifest>
             )"});
+        ret.push_back({"AidlAccessorInDifferentHals", "Conflicting Accessor", R"(
+                <hal format="aidl">
+                    <name>android.hardware.nfc</name>
+                    <version>2</version>
+                    <accessor>android.os.accessor.IAccessor/android.hardware.nfc.INfc/a</accessor>
+                    <fqname>INfc/default</fqname>
+                </hal>
+                <hal format="aidl">
+                    <name>android.hardware.nfc</name>
+                    <version>2</version>
+                    <accessor>android.os.accessor.IAccessor/android.hardware.nfc.INfc/a</accessor>
+                    <fqname>INfc/foo</fqname>
+                </hal>
+            </manifest>
+            )"});
         return ret;
     }
     static std::string getTestSuffix(const TestParamInfo<ParamType>& info) {
