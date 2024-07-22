@@ -41,19 +41,23 @@ ManifestInstance& ManifestInstance::operator=(const ManifestInstance&) = default
 ManifestInstance& ManifestInstance::operator=(ManifestInstance&&) noexcept = default;
 
 ManifestInstance::ManifestInstance(FqInstance&& fqInstance, TransportArch&& ta, HalFormat fmt,
-                                   std::optional<std::string>&& updatableViaApex)
+                                   std::optional<std::string>&& updatableViaApex,
+                                   std::optional<std::string>&& accessor)
     : mFqInstance(std::move(fqInstance)),
       mTransportArch(std::move(ta)),
       mHalFormat(fmt),
-      mUpdatableViaApex(std::move(updatableViaApex)) {}
+      mUpdatableViaApex(std::move(updatableViaApex)),
+      mAccessor(std::move(accessor)) {}
 
 ManifestInstance::ManifestInstance(const FqInstance& fqInstance, const TransportArch& ta,
                                    HalFormat fmt,
-                                   const std::optional<std::string>& updatableViaApex)
+                                   const std::optional<std::string>& updatableViaApex,
+                                   const std::optional<std::string>& accessor)
     : mFqInstance(fqInstance),
       mTransportArch(ta),
       mHalFormat(fmt),
-      mUpdatableViaApex(updatableViaApex) {}
+      mUpdatableViaApex(updatableViaApex),
+      mAccessor(accessor) {}
 
 const std::string& ManifestInstance::package() const {
     return mFqInstance.getPackage();
@@ -95,13 +99,18 @@ const std::optional<std::string>& ManifestInstance::updatableViaApex() const {
     return mUpdatableViaApex;
 }
 
+const std::optional<std::string>& ManifestInstance::accessor() const {
+    return mAccessor;
+}
+
 const FqInstance& ManifestInstance::getFqInstance() const {
     return mFqInstance;
 }
 
 bool ManifestInstance::operator==(const ManifestInstance& other) const {
     return mFqInstance == other.mFqInstance && mTransportArch == other.mTransportArch &&
-           mHalFormat == other.mHalFormat && mUpdatableViaApex == other.mUpdatableViaApex;
+           mHalFormat == other.mHalFormat && mUpdatableViaApex == other.mUpdatableViaApex &&
+           mAccessor == other.mAccessor;
 }
 bool ManifestInstance::operator<(const ManifestInstance& other) const {
     if (mFqInstance < other.mFqInstance) return true;
@@ -110,7 +119,9 @@ bool ManifestInstance::operator<(const ManifestInstance& other) const {
     if (other.mTransportArch < mTransportArch) return false;
     if (mHalFormat < other.mHalFormat) return true;
     if (other.mHalFormat < mHalFormat) return false;
-    return mUpdatableViaApex < other.mUpdatableViaApex;
+    if (mUpdatableViaApex < other.mUpdatableViaApex) return true;
+    if (other.mUpdatableViaApex < mUpdatableViaApex) return false;
+    return mAccessor < other.mAccessor;
 }
 
 std::string ManifestInstance::getSimpleFqInstance() const {
@@ -165,7 +176,8 @@ ManifestInstance ManifestInstance::withVersion(const Version& v) const {
     FqInstance fqInstance;
     CHECK(fqInstance.setTo(getFqInstance().getPackage(), v.majorVer, v.minorVer,
                            getFqInstance().getInterface(), getFqInstance().getInstance()));
-    return ManifestInstance(std::move(fqInstance), mTransportArch, format(), mUpdatableViaApex);
+    return ManifestInstance(std::move(fqInstance), mTransportArch, format(), mUpdatableViaApex,
+                            mAccessor);
 }
 
 }  // namespace vintf

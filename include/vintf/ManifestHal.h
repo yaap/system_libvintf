@@ -65,6 +65,10 @@ struct ManifestHal : public WithFileName {
     bool isOverride() const { return mIsOverride; }
     const std::optional<std::string>& updatableViaApex() const { return mUpdatableViaApex; }
 
+    // Returns the name of the accessor interface for this HAL.
+    // If not set, no accessor will be used.
+    const std::optional<std::string>& accessor() const { return mAccessor; }
+
     // When true, the existence of this <hal> tag means the component does NOT
     // exist on the device. This is useful for ODM manifests to specify that
     // a HAL is disabled on certain products.
@@ -99,6 +103,7 @@ struct ManifestHal : public WithFileName {
     bool verifyInstance(const FqInstance& fqInstance, std::string* error = nullptr) const;
 
     bool mIsOverride = false;
+    std::optional<std::string> mAccessor;
     std::optional<std::string> mUpdatableViaApex;
     // All instances specified with <fqname> and <version> x <interface> x <instance>
     std::set<ManifestInstance> mManifestInstances;
