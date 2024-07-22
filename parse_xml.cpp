@@ -336,9 +336,9 @@ struct XmlNodeConverter {
         return true;
     }
 
+    template <typename T>
     inline bool parseOptionalTextElement(NodeType* root, const std::string& elementName,
-                                         std::string&& defaultValue, std::string* s,
-                                         std::string* /* error */) const {
+                                         T&& defaultValue, T* s, std::string* /* error */) const {
         NodeType* child = getChild(root, elementName);
         *s = child == nullptr ? std::move(defaultValue) : getText(child);
         return true;
@@ -812,6 +812,9 @@ struct ManifestHalConverter : public XmlNodeConverter<ManifestHal> {
         if (const auto& apex = object.updatableViaApex(); apex.has_value()) {
             appendAttr(root, "updatable-via-apex", apex.value());
         }
+        if (const auto& accessor = object.accessor(); accessor.has_value()) {
+            appendTextElement(root, "accessor", accessor.value(), param.d);
+        }
         if (param.flags.isFqnameEnabled()) {
             std::set<std::string> simpleFqInstances;
             object.forEachInstance([&simpleFqInstances](const auto& manifestInstance) {
@@ -835,6 +838,7 @@ struct ManifestHalConverter : public XmlNodeConverter<ManifestHal> {
             !parseOptionalAttr(root, "override", false, &object->mIsOverride, param.error) ||
             !parseOptionalAttr(root, "updatable-via-apex", {}, &object->mUpdatableViaApex,
                                param.error) ||
+            !parseOptionalTextElement(root, "accessor", {}, &object->mAccessor, param.error) ||
             !parseTextElement(root, "name", &object->name, param.error) ||
             !parseOptionalChild(root, TransportArchConverter{}, {}, &object->transportArch,
                                 param) ||
@@ -842,6 +846,10 @@ struct ManifestHalConverter : public XmlNodeConverter<ManifestHal> {
                                param.error) ||
             !parseOptionalAttr(root, "min-level", Level::UNSPECIFIED, &object->mMinLevel,
                                param.error)) {
+            return false;
+        }
+        if (getChildren(root, "accessor").size() > 1) {
+            *param.error = "No more than one <accessor> is allowed in <hal>";
             return false;
         }
 
