@@ -26,4 +26,5 @@ xsd_config {
     name: "hal_manifest",
     srcs: ["hal_manifest.xsd"],
     package_name: "hal.manifest",
+    api_dir: "schema",
 }
