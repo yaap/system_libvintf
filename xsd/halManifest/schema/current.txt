@@ -5,6 +5,8 @@ package hal.manifest {
     ctor public Hal();
     method public String getFormat();
     method public java.util.List<java.lang.String> getFqname();
+    method public String getMaxLevel();
+    method public String getMinLevel();
     method public String getName();
     method public String getOverride();
     method public hal.manifest.Hal.Transport getTransport();
@@ -12,6 +14,8 @@ package hal.manifest {
     method public java.util.List<java.lang.String> getVersion();
     method public java.util.List<hal.manifest.Interface> get_interface();
     method public void setFormat(String);
+    method public void setMaxLevel(String);
+    method public void setMinLevel(String);
     method public void setName(String);
     method public void setOverride(String);
     method public void setTransport(hal.manifest.Hal.Transport);
