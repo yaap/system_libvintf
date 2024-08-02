@@ -15,9 +15,11 @@
  */
 
 #include <dirent.h>
+#include <glob.h>
 #include <string>
 
 #include <android-base/properties.h>
+#include <android-base/scopeguard.h>
 #include <android-base/strings.h>
 #include "utility/ValidateXml.h"
 
@@ -39,6 +41,20 @@ static void get_files_in_dirs(const char* dir_path, std::vector<std::string>& fi
         files.push_back(de->d_name);
     }
     closedir(d);
+}
+
+static std::vector<std::string> glob(const std::string& pattern) {
+    glob_t glob_result;
+    auto ret = glob(pattern.c_str(), GLOB_MARK, nullptr, &glob_result);
+    auto guard = android::base::make_scope_guard([&glob_result] { globfree(&glob_result); });
+
+    std::vector<std::string> files;
+    if (ret == 0) {
+        for (size_t i = 0; i < glob_result.gl_pathc; i++) {
+            files.emplace_back(glob_result.gl_pathv[i]);
+        }
+    }
+    return files;
 }
 
 TEST(CheckConfig, halManifestValidation) {
@@ -75,5 +91,14 @@ TEST(CheckConfig, halManifestValidation) {
         for (std::string file_name : files) {
             EXPECT_VALID_XML((dir_path + "/"s + file_name).c_str(), xsd);
         }
+    }
+
+    // APEXes contain fragments as well.
+    auto fragments = glob("/apex/*/etc/vintf/*.xml");
+    for (const auto& fragment : fragments) {
+        // Skip /apex/name@version paths to avoid double processing
+        auto parts = android::base::Split(fragment, "/");
+        if (parts.size() < 3 || parts[2].find('@') != std::string::npos) continue;
+        EXPECT_VALID_XML(fragment.c_str(), xsd);
     }
 }
