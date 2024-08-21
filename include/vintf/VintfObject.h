@@ -319,7 +319,7 @@ class VintfObject {
     status_t fetchFrameworkHalManifestApex(HalManifest* out, std::string* error = nullptr);
 
     status_t fetchUnfilteredFrameworkHalManifest(HalManifest* out, std::string* error);
-    void filterHalsByDeviceManifestLevel(HalManifest* out);
+    void filterHalsByDeviceManifestLevel(HalManifest* out, Level level);
 
     // Helper for checking matrices against lib*idlmetadata. Wrapper of the other variant of
     // getAllFrameworkMatrixLevels. Treat empty output as an error.
