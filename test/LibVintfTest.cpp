@@ -1584,10 +1584,10 @@ TEST_F(LibVintfTest, FullCompat) {
 TEST_F(LibVintfTest, ApexInterfaceShouldBeOkayWithoutApexInfoList) {
     details::FileSystemNoOp fs;
     details::PropertyFetcherNoOp pf;
-    details::Apex apex;
-    ASSERT_FALSE(apex.HasUpdate(&fs, &pf));
+    EXPECT_THAT(apex::GetModifiedTime(&fs, &pf), std::nullopt);
     std::vector<std::string> dirs;
-    ASSERT_EQ(OK, apex.DeviceVintfDirs(&fs, &pf, &dirs, nullptr));
+    ASSERT_EQ(OK, apex::GetDeviceVintfDirs(&fs, &pf, &dirs, nullptr));
+    ASSERT_EQ(dirs, std::vector<std::string>{});
 }
 
 struct NativeHalCompatTestParam {
@@ -4586,10 +4586,10 @@ struct InMemoryFileSystem : FileSystem {
         *out = std::vector<std::string>{begin(entries), end(entries)};
         return OK;
     }
-    status_t modifiedTime(const std::string& path, TimeSpec* mtime, std::string* error) const {
+    status_t modifiedTime(const std::string& path, timespec* mtime, std::string* error) const {
         (void)error;
         if (auto it = files.find(path); it != files.end()) {
-            *mtime = TimeSpec{};
+            *mtime = timespec{};
             return OK;
         }
         return NAME_NOT_FOUND;

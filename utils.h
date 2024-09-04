@@ -26,6 +26,17 @@
 #include <vintf/RuntimeInfo.h>
 #include <vintf/parse_xml.h>
 
+// Equality for timespec. This should be in global namespace where timespec
+// is defined.
+
+inline bool operator==(const timespec& a, const timespec& b) noexcept {
+    return a.tv_sec == b.tv_sec && a.tv_nsec == b.tv_nsec;
+}
+
+inline bool operator!=(const timespec& a, const timespec& b) noexcept {
+    return !(a == b);
+}
+
 namespace android {
 namespace vintf {
 namespace details {

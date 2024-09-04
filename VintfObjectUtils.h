@@ -27,17 +27,26 @@ namespace android {
 namespace vintf {
 namespace details {
 
+// Get() fetches data and caches it in LockedSharedPtr. The cached data will be
+// invalidated when `lastModified` is changed from the last call. Typically `lastModified`
+// can refer to the "last modified" timestamp of the data source.
 template <typename T, typename F>
-std::shared_ptr<const T> Get(const char* id, LockedSharedPtr<T>* ptr,
-                             const F& fetchAllInformation) {
-    std::unique_lock<std::mutex> _lock(ptr->mutex);
-    if (!ptr->fetchedOnce) {
+std::shared_ptr<const T> Get(const char* id, LockedSharedPtr<T>* ptr, const F& fetch,
+                             const std::optional<timespec>& lastModified = std::nullopt) {
+    std::unique_lock<std::mutex> lock(ptr->mutex);
+    // Check if the last fetched data is fresh. If it's old, re-fetch the data
+    // with the new timestamp.
+    if (ptr->object && ptr->lastModified != lastModified) {
+        LOG(INFO) << id << ": Reloading VINTF information.";
+        ptr->object = nullptr;
+    }
+    if (!ptr->object) {
         LOG(INFO) << id << ": Reading VINTF information.";
         ptr->object = std::make_unique<T>();
+        ptr->lastModified = lastModified;
         std::string error;
-        status_t status = fetchAllInformation(ptr->object.get(), &error);
+        status_t status = fetch(ptr->object.get(), &error);
         if (status == OK) {
-            ptr->fetchedOnce = true;
             LOG(INFO) << id << ": Successfully processed VINTF information";
         } else {
             // Doubled because a malformed error std::string might cause us to

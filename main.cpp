@@ -17,9 +17,11 @@
 #include <getopt.h>
 
 #include <android-base/strings.h>
+#include <json/json.h>
 #include <vintf/VintfObject.h>
 #include <vintf/parse_string.h>
 #include <vintf/parse_xml.h>
+
 #include <iomanip>
 #include <iostream>
 #include <string>
@@ -64,8 +66,33 @@ enum Status : int {
     USAGE,
 };
 
+struct ParsedOptions;
+
+void dumpLegacy(const ParsedOptions&);
+void dumpDm(const ParsedOptions&);
+void dumpFm(const ParsedOptions&);
+void dumpDcm(const ParsedOptions&);
+void dumpFcm(const ParsedOptions&);
+void dumpRi(const ParsedOptions&);
+
+struct DumpTargetOption {
+    std::string name;
+    std::function<void(const ParsedOptions&)> fn;
+    std::string help;
+};
+
+std::vector<DumpTargetOption> gTargetOptions = {
+    {"legacy", &dumpLegacy, "Print VINTF metadata."},
+    {"dm", &dumpDm, "Print Device HAL Manifest."},
+    {"fm", &dumpFm, "Print Framework HAL Manifest."},
+    {"dcm", &dumpDcm, "Print Device Compatibility Matrix."},
+    {"fcm", &dumpFcm, "Print Framework Compatibility Matrix."},
+    {"ri", &dumpRi, "Print Runtime Information."},
+};
+
 struct ParsedOptions {
     bool verbose = false;
+    std::function<void(const ParsedOptions&)> fn = &dumpLegacy;
 };
 
 struct Option {
@@ -129,6 +156,16 @@ Status parseOptions(int argc, char** argv, const std::vector<Option>& options, P
         Status status = found->op(out);
         if (status != OK) return status;
     }
+    // optional/positional/enum
+    if (optind < argc) {
+        for (const auto& o : gTargetOptions) {
+            if (o.name == argv[optind]) {
+                out->fn = o.fn;
+                optind++;
+                break;
+            }
+        }
+    }
     if (optind < argc) {
         // see non option
         std::cerr << "unrecognized option `" << argv[optind] << "'" << std::endl;
@@ -148,6 +185,16 @@ void usage(char* me, const std::vector<Option>& options) {
         std::cerr << ": "
                   << android::base::Join(android::base::Split(e.help, "\n"), "\n            ")
                   << std::endl;
+    }
+    // optional/positional/enum
+    std::cerr << "        ";
+    std::vector<std::string> enumValues;
+    for (const auto& o : gTargetOptions) {
+        enumValues.push_back(o.name);
+    }
+    std::cerr << "[" << android::base::Join(enumValues, "|") << "]:\n";
+    for (const auto& o : gTargetOptions) {
+        std::cerr << "            " << o.name << ": " << o.help << "\n";
     }
 }
 
@@ -242,6 +289,10 @@ int main(int argc, char** argv) {
     if (status == USAGE) usage(argv[0], gAvailableOptions);
     if (status != OK) return status;
 
+    options.fn(options);
+}
+
+void dumpLegacy(const ParsedOptions& options) {
     auto vm = VintfObject::GetDeviceHalManifest();
     auto fm = VintfObject::GetFrameworkHalManifest();
     auto vcm = VintfObject::GetDeviceCompatibilityMatrix();
@@ -327,5 +378,45 @@ int main(int argc, char** argv) {
                   << deprecateString(deprecate);
         if (deprecate != NO_DEPRECATED_HALS) std::cout << ", " << error;
         std::cout << std::endl;
+    }
+}
+
+void dumpDm(const ParsedOptions&) {
+    auto dm = VintfObject::GetDeviceHalManifest();
+    if (dm != nullptr) std::cout << toXml(*dm);
+}
+
+void dumpFm(const ParsedOptions&) {
+    auto fm = VintfObject::GetFrameworkHalManifest();
+    if (fm != nullptr) std::cout << toXml(*fm);
+}
+
+void dumpDcm(const ParsedOptions&) {
+    auto dcm = VintfObject::GetDeviceCompatibilityMatrix();
+    if (dcm != nullptr) std::cout << toXml(*dcm);
+}
+
+void dumpFcm(const ParsedOptions&) {
+    auto fcm = VintfObject::GetFrameworkCompatibilityMatrix();
+    if (fcm != nullptr) std::cout << toXml(*fcm);
+}
+
+// Keep field names in sync with VintfDeviceInfo's usage
+void dumpRi(const ParsedOptions&) {
+    const RuntimeInfo::FetchFlags flags = RuntimeInfo::FetchFlag::CPU_INFO |
+                                          RuntimeInfo::FetchFlag::CPU_VERSION |
+                                          RuntimeInfo::FetchFlag::POLICYVERS;
+
+    auto ri = VintfObject::GetRuntimeInfo(flags);
+    if (ri != nullptr) {
+        Json::Value root;
+        root["cpu_info"] = ri->cpuInfo();
+        root["os_name"] = ri->osName();
+        root["node_name"] = ri->nodeName();
+        root["os_release"] = ri->osRelease();
+        root["os_version"] = ri->osVersion();
+        root["hardware_id"] = ri->hardwareId();
+        root["kernel_version"] = to_string(ri->kernelVersion());
+        std::cout << root << '\n';
     }
 }

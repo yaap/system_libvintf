@@ -72,7 +72,7 @@ class WritableFileSystemImpl : public WritableFileSystem {
                        std::string* error) const override {
         return mRoFileSystem.listFiles(path, out, error);
     }
-    status_t modifiedTime(const std::string& path, TimeSpec* out,
+    status_t modifiedTime(const std::string& path, timespec* out,
                           std::string* error) const override {
         return mRoFileSystem.modifiedTime(path, out, error);
     }
