@@ -5442,9 +5442,8 @@ TEST_F(LibVintfTest, HalManifestMergeKernel) {
 
 // clang-format on
 
-TEST_F(LibVintfTest, ManifestHalMaxLevel) {
-    for (auto& type : {"framework", "device"}) {
-        std::string xml = "<manifest " + kMetaVersionStr + " type=\"" + type + R"(">
+TEST_F(LibVintfTest, FrameworkManifestHalMaxLevel) {
+    std::string xml = "<manifest " + kMetaVersionStr + R"( type="framework">
                            <hal max-level="3">
                                <name>android.frameworks.schedulerservice</name>
                                <transport>hwbinder</transport>
@@ -5460,27 +5459,22 @@ TEST_F(LibVintfTest, ManifestHalMaxLevel) {
                            </hal>
                        </manifest>)";
 
-        std::string error;
-        HalManifest manifest;
-        ASSERT_TRUE(fromXml(&manifest, xml, &error)) << error;
+    std::string error;
+    HalManifest manifest;
+    ASSERT_TRUE(fromXml(&manifest, xml, &error)) << error;
 
-        auto hals = getHals(manifest, "android.frameworks.schedulerservice");
-        EXPECT_THAT(hals,
-                    ElementsAre(Property(&ManifestHal::getMaxLevel, Eq(static_cast<Level>(3)))));
+    auto hals = getHals(manifest, "android.frameworks.schedulerservice");
+    EXPECT_THAT(hals, ElementsAre(Property(&ManifestHal::getMaxLevel, Eq(static_cast<Level>(3)))));
 
-        hals = getHals(manifest, "android.frameworks.myaidl");
-        EXPECT_THAT(hals,
-                    ElementsAre(Property(&ManifestHal::getMaxLevel, Eq(static_cast<Level>(4)))));
+    hals = getHals(manifest, "android.frameworks.myaidl");
+    EXPECT_THAT(hals, ElementsAre(Property(&ManifestHal::getMaxLevel, Eq(static_cast<Level>(4)))));
 
-        hals = getHals(manifest, "some-native-hal");
-        EXPECT_THAT(hals,
-                    ElementsAre(Property(&ManifestHal::getMaxLevel, Eq(static_cast<Level>(5)))));
-    }
+    hals = getHals(manifest, "some-native-hal");
+    EXPECT_THAT(hals, ElementsAre(Property(&ManifestHal::getMaxLevel, Eq(static_cast<Level>(5)))));
 }
 
-TEST_F(LibVintfTest, ManifestHalMinLevel) {
-    for (auto& type : {"framework", "device"}) {
-        std::string xml = "<manifest " + kMetaVersionStr + " type=\"" + type + R"(">
+TEST_F(LibVintfTest, FrameworkManifestHalMinLevel) {
+    std::string xml = "<manifest " + kMetaVersionStr + R"( type="framework">
                            <hal min-level="3">
                                <name>android.frameworks.schedulerservice</name>
                                <transport>hwbinder</transport>
@@ -5496,27 +5490,22 @@ TEST_F(LibVintfTest, ManifestHalMinLevel) {
                            </hal>
                        </manifest>)";
 
-        std::string error;
-        HalManifest manifest;
-        ASSERT_TRUE(fromXml(&manifest, xml, &error)) << error;
+    std::string error;
+    HalManifest manifest;
+    ASSERT_TRUE(fromXml(&manifest, xml, &error)) << error;
 
-        auto hals = getHals(manifest, "android.frameworks.schedulerservice");
-        EXPECT_THAT(hals,
-                    ElementsAre(Property(&ManifestHal::getMinLevel, Eq(static_cast<Level>(3)))));
+    auto hals = getHals(manifest, "android.frameworks.schedulerservice");
+    EXPECT_THAT(hals, ElementsAre(Property(&ManifestHal::getMinLevel, Eq(static_cast<Level>(3)))));
 
-        hals = getHals(manifest, "android.frameworks.myaidl");
-        EXPECT_THAT(hals,
-                    ElementsAre(Property(&ManifestHal::getMinLevel, Eq(static_cast<Level>(4)))));
+    hals = getHals(manifest, "android.frameworks.myaidl");
+    EXPECT_THAT(hals, ElementsAre(Property(&ManifestHal::getMinLevel, Eq(static_cast<Level>(4)))));
 
-        hals = getHals(manifest, "some-native-hal");
-        EXPECT_THAT(hals,
-                    ElementsAre(Property(&ManifestHal::getMinLevel, Eq(static_cast<Level>(5)))));
-    }
+    hals = getHals(manifest, "some-native-hal");
+    EXPECT_THAT(hals, ElementsAre(Property(&ManifestHal::getMinLevel, Eq(static_cast<Level>(5)))));
 }
 
-TEST_F(LibVintfTest, ManifestHalMinMaxLevel) {
-    for (auto& type : {"framework", "device"}) {
-        std::string xml = "<manifest " + kMetaVersionStr + " type=\"" + type + R"(">
+TEST_F(LibVintfTest, FrameworkManifestHalMinMaxLevel) {
+    std::string xml = "<manifest " + kMetaVersionStr + R"( type="framework">
                            <hal min-level="2" max-level="5">
                                <name>android.frameworks.schedulerservice</name>
                                <transport>hwbinder</transport>
@@ -5532,28 +5521,21 @@ TEST_F(LibVintfTest, ManifestHalMinMaxLevel) {
                            </hal>
                        </manifest>)";
 
-        std::string error;
-        HalManifest manifest;
-        ASSERT_TRUE(fromXml(&manifest, xml, &error)) << error;
+    std::string error;
+    HalManifest manifest;
+    ASSERT_TRUE(fromXml(&manifest, xml, &error)) << error;
 
-        auto hals = getHals(manifest, "android.frameworks.schedulerservice");
-        EXPECT_THAT(hals,
-                    ElementsAre(Property(&ManifestHal::getMinLevel, Eq(static_cast<Level>(2)))));
-        EXPECT_THAT(hals,
-                    ElementsAre(Property(&ManifestHal::getMaxLevel, Eq(static_cast<Level>(5)))));
+    auto hals = getHals(manifest, "android.frameworks.schedulerservice");
+    EXPECT_THAT(hals, ElementsAre(Property(&ManifestHal::getMinLevel, Eq(static_cast<Level>(2)))));
+    EXPECT_THAT(hals, ElementsAre(Property(&ManifestHal::getMaxLevel, Eq(static_cast<Level>(5)))));
 
-        hals = getHals(manifest, "android.frameworks.myaidl");
-        EXPECT_THAT(hals,
-                    ElementsAre(Property(&ManifestHal::getMinLevel, Eq(static_cast<Level>(3)))));
-        EXPECT_THAT(hals,
-                    ElementsAre(Property(&ManifestHal::getMaxLevel, Eq(static_cast<Level>(6)))));
+    hals = getHals(manifest, "android.frameworks.myaidl");
+    EXPECT_THAT(hals, ElementsAre(Property(&ManifestHal::getMinLevel, Eq(static_cast<Level>(3)))));
+    EXPECT_THAT(hals, ElementsAre(Property(&ManifestHal::getMaxLevel, Eq(static_cast<Level>(6)))));
 
-        hals = getHals(manifest, "some-native-hal");
-        EXPECT_THAT(hals,
-                    ElementsAre(Property(&ManifestHal::getMinLevel, Eq(static_cast<Level>(4)))));
-        EXPECT_THAT(hals,
-                    ElementsAre(Property(&ManifestHal::getMaxLevel, Eq(static_cast<Level>(7)))));
-    }
+    hals = getHals(manifest, "some-native-hal");
+    EXPECT_THAT(hals, ElementsAre(Property(&ManifestHal::getMinLevel, Eq(static_cast<Level>(4)))));
+    EXPECT_THAT(hals, ElementsAre(Property(&ManifestHal::getMaxLevel, Eq(static_cast<Level>(7)))));
 }
 
 TEST_F(LibVintfTest, RuntimeInfoParseGkiKernelReleaseOk) {

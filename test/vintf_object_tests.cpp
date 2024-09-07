@@ -2288,25 +2288,17 @@ class FrameworkManifestLevelTest : public VintfObjectTestBase {
             }));
     }
 
-    void expectTargetFcmVersion(size_t level, Version metaVersion) {
+    void expectTargetFcmVersion(size_t level) {
         std::string xml = android::base::StringPrintf(
-            R"(<manifest version="%s" type="device" target-level="%s"/>)",
-            to_string(metaVersion).c_str(), to_string(static_cast<Level>(level)).c_str());
+            R"(<manifest %s type="device" target-level="%s"/>)", kMetaVersionStr.c_str(),
+            to_string(static_cast<Level>(level)).c_str());
         expectFetch(kVendorManifest, xml);
         (void)vintfObject->getDeviceHalManifest();
     }
 
-    void expectFrameworkContainsAidl(const std::string& interfaceName, bool exists = true) {
+    void expectContainsHidl(const Version& version, const std::string& interfaceName,
+                            bool exists = true) {
         auto manifest = vintfObject->getFrameworkHalManifest();
-        expectContainsAidl(manifest, interfaceName, exists);
-    }
-    void expectFrameworkContainsHidl(const Version& version, const std::string& interfaceName,
-                                     bool exists = true) {
-        auto manifest = vintfObject->getFrameworkHalManifest();
-        expectContainsHidl(manifest, version, interfaceName, exists);
-    }
-    void expectContainsHidl(std::shared_ptr<const HalManifest>& manifest, const Version& version,
-                            const std::string& interfaceName, bool exists = true) {
         ASSERT_NE(nullptr, manifest);
         EXPECT_NE(
             manifest->getHidlInstances("android.frameworks.foo", version, interfaceName).empty(),
@@ -2315,14 +2307,15 @@ class FrameworkManifestLevelTest : public VintfObjectTestBase {
             << "exist.";
     }
 
-    void expectContainsAidl(std::shared_ptr<const HalManifest>& manifest,
-                            const std::string& interfaceName, bool exists = true) {
+    void expectContainsAidl(const std::string& interfaceName, bool exists = true) {
+        auto manifest = vintfObject->getFrameworkHalManifest();
         ASSERT_NE(nullptr, manifest);
         EXPECT_NE(manifest->getAidlInstances("android.frameworks.foo", interfaceName).empty(),
                   exists)
             << interfaceName << " should " << (exists ? "" : "not ") << "exist.";
     }
 
+   private:
     std::string getFragment(HalFormat halFormat, Level minLevel, Level maxLevel,
                             const char* versionedInterface) {
         auto format = R"(<hal format="%s"%s>
@@ -2354,122 +2347,50 @@ TEST_F(FrameworkManifestLevelTest, NoTargetFcmVersion) {
     expectFetch(kVendorManifest, xml);
 
     // If no target FCM version, it is treated as an infinitely old device
-    expectFrameworkContainsHidl({3, 0}, "ISystemEtc");
-    expectFrameworkContainsHidl({4, 0}, "ISystemEtcFragment");
-    expectFrameworkContainsAidl("ISystemEtcFragment3", false);
-    expectFrameworkContainsAidl("ISystemEtc4", false);
+    expectContainsHidl({3, 0}, "ISystemEtc");
+    expectContainsHidl({4, 0}, "ISystemEtcFragment");
+    expectContainsAidl("ISystemEtcFragment3", false);
+    expectContainsAidl("ISystemEtc4", false);
 }
 
 TEST_F(FrameworkManifestLevelTest, TargetFcmVersion4) {
-    expectTargetFcmVersion(4, kMetaVersion);
-    expectFrameworkContainsHidl({3, 0}, "ISystemEtc");
-    expectFrameworkContainsHidl({4, 0}, "ISystemEtcFragment");
-    expectFrameworkContainsAidl("ISystemEtcFragment3", false);
-    expectFrameworkContainsAidl("ISystemEtc4", false);
+    expectTargetFcmVersion(4);
+    expectContainsHidl({3, 0}, "ISystemEtc");
+    expectContainsHidl({4, 0}, "ISystemEtcFragment");
+    expectContainsAidl("ISystemEtcFragment3", false);
+    expectContainsAidl("ISystemEtc4", false);
 }
 
 TEST_F(FrameworkManifestLevelTest, TargetFcmVersion5) {
-    expectTargetFcmVersion(5, kMetaVersion);
-    expectFrameworkContainsHidl({3, 0}, "ISystemEtc");
-    expectFrameworkContainsHidl({4, 0}, "ISystemEtcFragment");
-    expectFrameworkContainsAidl("ISystemEtcFragment3");
-    expectFrameworkContainsAidl("ISystemEtc4", false);
+    expectTargetFcmVersion(5);
+    expectContainsHidl({3, 0}, "ISystemEtc");
+    expectContainsHidl({4, 0}, "ISystemEtcFragment");
+    expectContainsAidl("ISystemEtcFragment3");
+    expectContainsAidl("ISystemEtc4", false);
 }
 
 TEST_F(FrameworkManifestLevelTest, TargetFcmVersion6) {
-    expectTargetFcmVersion(6, kMetaVersion);
-    expectFrameworkContainsHidl({3, 0}, "ISystemEtc");
-    expectFrameworkContainsHidl({4, 0}, "ISystemEtcFragment");
-    expectFrameworkContainsAidl("ISystemEtcFragment3");
-    expectFrameworkContainsAidl("ISystemEtc4");
+    expectTargetFcmVersion(6);
+    expectContainsHidl({3, 0}, "ISystemEtc");
+    expectContainsHidl({4, 0}, "ISystemEtcFragment");
+    expectContainsAidl("ISystemEtcFragment3");
+    expectContainsAidl("ISystemEtc4");
 }
 
 TEST_F(FrameworkManifestLevelTest, TargetFcmVersion7) {
-    expectTargetFcmVersion(7, kMetaVersion);
-    expectFrameworkContainsHidl({3, 0}, "ISystemEtc", false);
-    expectFrameworkContainsHidl({4, 0}, "ISystemEtcFragment");
-    expectFrameworkContainsAidl("ISystemEtcFragment3", false);
-    expectFrameworkContainsAidl("ISystemEtc4");
+    expectTargetFcmVersion(7);
+    expectContainsHidl({3, 0}, "ISystemEtc", false);
+    expectContainsHidl({4, 0}, "ISystemEtcFragment");
+    expectContainsAidl("ISystemEtcFragment3", false);
+    expectContainsAidl("ISystemEtc4");
 }
 
-class DeviceManifestLevelTest : public FrameworkManifestLevelTest {
-   protected:
-    void SetUp() override { SetUpWithVersion(kMetaVersion); }
-    void SetUpWithVersion(Version metaVersion) {
-        VintfObjectTestBase::SetUp();
-        useEmptyFileSystem();
-
-        auto head = "<manifest version=\"" + to_string(metaVersion) + R"(" type="device">)";
-        auto tail = "</manifest>";
-
-        auto comboFragment =
-            head + getFragment(HalFormat::HIDL, Level::UNSPECIFIED, Level{6}, "@3.0::ISystemEtc") +
-            getFragment(HalFormat::AIDL, Level{6}, Level{7}, "ISystemEtc4") + tail;
-        expectFetch(kVendorManifestFragmentDir + "combo.xml"s, comboFragment);
-
-        auto hidlFragment =
-            head +
-            getFragment(HalFormat::HIDL, Level::UNSPECIFIED, Level{7}, "@4.0::ISystemEtcFragment") +
-            tail;
-        expectFetch(kVendorManifestFragmentDir + "hidl.xml"s, hidlFragment);
-
-        auto aidlFragment =
-            head + getFragment(HalFormat::AIDL, Level{5}, Level{6}, "ISystemEtcFragment3") + tail;
-        expectFetch(kVendorManifestFragmentDir + "aidl.xml"s, aidlFragment);
-
-        EXPECT_CALL(fetcher(), listFiles(StrEq(kVendorManifestFragmentDir), _, _))
-            .Times(AnyNumber())
-            .WillRepeatedly(Invoke([](const auto&, auto* out, auto*) {
-                *out = {"hidl.xml", "aidl.xml", "combo.xml"};
-                return ::android::OK;
-            }));
-    }
-
-    void expectDeviceContainsAidl(const std::string& interfaceName, bool exists = true) {
-        auto manifest = vintfObject->getDeviceHalManifest();
-        expectContainsAidl(manifest, interfaceName, exists);
-    }
-    void expectDeviceContainsHidl(const Version& version, const std::string& interfaceName,
-                                  bool exists = true) {
-        auto manifest = vintfObject->getDeviceHalManifest();
-        expectContainsHidl(manifest, version, interfaceName, exists);
-    }
-};
-
-TEST_F(DeviceManifestLevelTest, DeviceNoTargetFcmVersion) {
-    auto xml =
-        android::base::StringPrintf(R"(<manifest %s type="device"/> )", kMetaVersionStr.c_str());
-    expectFetch(kVendorManifest, xml);
-
-    // If no target FCM version, it is treated as an infinitely old device
-    expectDeviceContainsHidl({3, 0}, "ISystemEtc");
-    expectDeviceContainsHidl({4, 0}, "ISystemEtcFragment");
-    expectDeviceContainsAidl("ISystemEtcFragment3");
-    expectDeviceContainsAidl("ISystemEtc4");
-}
-
-TEST_F(DeviceManifestLevelTest, DeviceTargetFcmVersion6) {
-    expectTargetFcmVersion(6, kMetaVersion);
-    expectDeviceContainsHidl({3, 0}, "ISystemEtc");
-    expectDeviceContainsHidl({4, 0}, "ISystemEtcFragment");
-    expectDeviceContainsAidl("ISystemEtcFragment3");
-    expectDeviceContainsAidl("ISystemEtc4");
-}
-
-TEST_F(DeviceManifestLevelTest, DeviceTargetFcmVersion202404) {
-    expectTargetFcmVersion(202404, kMetaVersion);
-    expectDeviceContainsHidl({3, 0}, "ISystemEtc");
-    expectDeviceContainsHidl({4, 0}, "ISystemEtcFragment");
-    expectDeviceContainsAidl("ISystemEtcFragment3");
-    expectDeviceContainsAidl("ISystemEtc4");
-}
-
-TEST_F(DeviceManifestLevelTest, DeviceTargetFcmVersion202504) {
-    expectTargetFcmVersion(202504, kMetaVersion);
-    expectDeviceContainsHidl({3, 0}, "ISystemEtc", false);
-    expectDeviceContainsHidl({4, 0}, "ISystemEtcFragment", false);
-    expectDeviceContainsAidl("ISystemEtcFragment3", false);
-    expectDeviceContainsAidl("ISystemEtc4", false);
+TEST_F(FrameworkManifestLevelTest, TargetFcmVersion8) {
+    expectTargetFcmVersion(8);
+    expectContainsHidl({3, 0}, "ISystemEtc", false);
+    expectContainsHidl({4, 0}, "ISystemEtcFragment", false);
+    expectContainsAidl("ISystemEtcFragment3", false);
+    expectContainsAidl("ISystemEtc4", false);
 }
 
 // clang-format off

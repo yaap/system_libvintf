@@ -291,15 +291,6 @@ status_t VintfObject::fetchDeviceHalManifestApex(HalManifest* out, std::string* 
     return addDirectoriesManifests(dirs, out, /*forceSchemaType=*/false, error);
 }
 
-// Should we filter HALs out of the manifest based on their `min-level` or
-// `max-level` attributes?
-// We added this behavior after Level::V and we don't want to change the
-// behavior in older devices that target V or earlier.
-// This filtering was added for the framework manifests previously.
-static bool shouldFilterMinMaxLevelDevice(Level currentTargetLevel) {
-    return currentTargetLevel != Level::UNSPECIFIED && currentTargetLevel > Level::V;
-}
-
 // Priority for loading vendor manifest:
 // 1. Vendor manifest + device fragments (including vapex) + ODM manifest (optional) + odm fragments
 // 2. Vendor manifest + device fragments (including vapex)
@@ -344,33 +335,19 @@ status_t VintfObject::fetchDeviceHalManifest(HalManifest* out, std::string* erro
                 return UNKNOWN_ERROR;
             }
         }
-
-        status_t odmDirStatus =
-            addDirectoryManifests(kOdmManifestFragmentDir, out, false /* forceSchemaType */, error);
-        if (shouldFilterMinMaxLevelDevice(out->level())) {
-            filterHalsByDeviceManifestLevel(out, out->level());
-        }
-        return odmDirStatus;
+        return addDirectoryManifests(kOdmManifestFragmentDir, out, false /* forceSchemaType */,
+                                     error);
     }
 
     // vendorStatus != OK, "out" is not changed.
     if (odmStatus == OK) {
         *out = std::move(odmManifest);
-        status_t odmDirStatus =
-            addDirectoryManifests(kOdmManifestFragmentDir, out, false /* forceSchemaType */, error);
-        if (shouldFilterMinMaxLevelDevice(out->level())) {
-            filterHalsByDeviceManifestLevel(out, out->level());
-        }
-        return odmDirStatus;
+        return addDirectoryManifests(kOdmManifestFragmentDir, out, false /* forceSchemaType */,
+                                     error);
     }
 
     // Use legacy /vendor/manifest.xml
-    status_t legacyVendorStatus =
-        out->fetchAllInformation(getFileSystem().get(), kVendorLegacyManifest, error);
-    if (shouldFilterMinMaxLevelDevice(out->level())) {
-        filterHalsByDeviceManifestLevel(out, out->level());
-    }
-    return legacyVendorStatus;
+    return out->fetchAllInformation(getFileSystem().get(), kVendorLegacyManifest, error);
 }
 
 // Priority:
@@ -527,11 +504,7 @@ status_t VintfObject::fetchFrameworkHalManifest(HalManifest* out, std::string* e
     if (status != OK) {
         return status;
     }
-    Level deviceLevel = Level::UNSPECIFIED;
-    if (auto deviceManifest = getDeviceHalManifest(); deviceManifest != nullptr) {
-        deviceLevel = deviceManifest->level();
-    }
-    filterHalsByDeviceManifestLevel(out, deviceLevel);
+    filterHalsByDeviceManifestLevel(out);
     return OK;
 }
 
@@ -552,15 +525,31 @@ status_t VintfObject::fetchFrameworkHalManifestApex(HalManifest* out, std::strin
 //    maxLevel = hal.getMaxLevel(); if unspecified, +infinity
 //    deviceManifestLevel = deviceManifest->level(); if unspecified, -infinity
 // That is, if device manifest has no level, it is treated as an infinitely old device.
-void VintfObject::filterHalsByDeviceManifestLevel(HalManifest* out, Level level) {
-    out->removeHalsIf([level](const ManifestHal& hal) {
+void VintfObject::filterHalsByDeviceManifestLevel(HalManifest* out) {
+    auto deviceManifest = getDeviceHalManifest();
+    Level deviceManifestLevel =
+        deviceManifest != nullptr ? deviceManifest->level() : Level::UNSPECIFIED;
+
+    if (deviceManifest == nullptr) {
+        LOG(WARNING) << "Cannot fetch device manifest to determine target FCM version to "
+                        "filter framework manifest HALs properly. Treating as infinitely old "
+                        "device.";
+    } else if (deviceManifestLevel == Level::UNSPECIFIED) {
+        LOG(WARNING)
+            << "Cannot filter framework manifest HALs properly because target FCM version is "
+               "unspecified in the device manifest. Treating as infinitely old device.";
+    }
+
+    out->removeHalsIf([deviceManifestLevel](const ManifestHal& hal) {
         if (hal.getMaxLevel() != Level::UNSPECIFIED) {
-            if (level != Level::UNSPECIFIED && hal.getMaxLevel() < level) {
+            if (deviceManifestLevel != Level::UNSPECIFIED &&
+                hal.getMaxLevel() < deviceManifestLevel) {
                 return true;
             }
         }
         if (hal.getMinLevel() != Level::UNSPECIFIED) {
-            if (level == Level::UNSPECIFIED || hal.getMinLevel() > level) {
+            if (deviceManifestLevel == Level::UNSPECIFIED ||
+                hal.getMinLevel() > deviceManifestLevel) {
                 return true;
             }
         }
