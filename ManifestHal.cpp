@@ -68,6 +68,7 @@ bool ManifestHal::operator==(const ManifestHal &other) const {
     if (!(transportArch == other.transportArch)) return false;
     if (isOverride() != other.isOverride()) return false;
     if (updatableViaApex() != other.updatableViaApex()) return false;
+    if (updatableViaSystem() != other.updatableViaSystem()) return false;
     if (mManifestInstances != other.mManifestInstances) return false;
     return accessor() == other.accessor();
 }
@@ -183,7 +184,8 @@ bool ManifestHal::insertInstance(const FqInstance& e, bool allowDupMajorVersion,
     }
 
     mManifestInstances.emplace(std::move(toAdd), this->transportArch, this->format,
-                               this->updatableViaApex(), this->accessor());
+                               this->updatableViaApex(), this->accessor(),
+                               this->updatableViaSystem());
     return true;
 }
 

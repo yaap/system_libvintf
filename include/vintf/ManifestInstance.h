@@ -39,10 +39,10 @@ class ManifestInstance {
     using VersionType = Version;
     ManifestInstance(FqInstance&& fqInstance, TransportArch&& ta, HalFormat fmt,
                      std::optional<std::string>&& updatableViaApex,
-                     std::optional<std::string>&& accessor);
+                     std::optional<std::string>&& accessor, bool updatableViaSystem);
     ManifestInstance(const FqInstance& fqInstance, const TransportArch& ta, HalFormat fmt,
                      const std::optional<std::string>& updatableViaApex,
-                     const std::optional<std::string>& accessor);
+                     const std::optional<std::string>& accessor, bool updatableViaSystem);
     const std::string& package() const;
     Version version() const;
     std::string interface() const;
@@ -54,6 +54,7 @@ class ManifestInstance {
     const std::optional<std::string>& updatableViaApex() const;
     const std::optional<std::string> ip() const;
     const std::optional<uint64_t> port() const;
+    bool updatableViaSystem() const;
 
     bool operator==(const ManifestInstance& other) const;
     bool operator<(const ManifestInstance& other) const;
@@ -85,6 +86,7 @@ class ManifestInstance {
     HalFormat mHalFormat;
     std::optional<std::string> mUpdatableViaApex;
     std::optional<std::string> mAccessor;
+    bool mUpdatableViaSystem;
 };
 
 }  // namespace vintf
