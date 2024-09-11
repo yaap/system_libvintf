@@ -8,11 +8,7 @@
     },
     {
       "name": "lshal_test"
-    }
-  ],
-  "postsubmit": [
-    // TODO(b/364234794): Move vts_halManifest_validate_test to presubmit
-    // once there is enough SLO data.
+    },
     {
       "name": "vts_halManifest_validate_test"
     }
