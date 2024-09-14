@@ -58,6 +58,7 @@ struct ManifestHal : public WithFileName {
     inline std::optional<uint64_t> port() const { return transportArch.port; }
 
     inline const std::string& getName() const { return name; }
+    inline bool updatableViaSystem() const { return mUpdatableViaSystem; }
 
     // Assume isValid().
     bool forEachInstance(const std::function<bool(const ManifestInstance&)>& func) const;
@@ -105,6 +106,7 @@ struct ManifestHal : public WithFileName {
     bool mIsOverride = false;
     std::optional<std::string> mAccessor;
     std::optional<std::string> mUpdatableViaApex;
+    bool mUpdatableViaSystem = false;
     // All instances specified with <fqname> and <version> x <interface> x <instance>
     std::set<ManifestInstance> mManifestInstances;
 

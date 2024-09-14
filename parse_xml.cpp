@@ -812,6 +812,10 @@ struct ManifestHalConverter : public XmlNodeConverter<ManifestHal> {
         if (const auto& apex = object.updatableViaApex(); apex.has_value()) {
             appendAttr(root, "updatable-via-apex", apex.value());
         }
+        // Only include update-via-system if enabled
+        if (object.updatableViaSystem()) {
+            appendAttr(root, "updatable-via-system", object.updatableViaSystem());
+        }
         if (const auto& accessor = object.accessor(); accessor.has_value()) {
             appendTextElement(root, "accessor", accessor.value(), param.d);
         }
@@ -838,6 +842,8 @@ struct ManifestHalConverter : public XmlNodeConverter<ManifestHal> {
             !parseOptionalAttr(root, "override", false, &object->mIsOverride, param.error) ||
             !parseOptionalAttr(root, "updatable-via-apex", {}, &object->mUpdatableViaApex,
                                param.error) ||
+            !parseOptionalAttr(root, "updatable-via-system", false /* defaultValue */,
+                               &object->mUpdatableViaSystem, param.error) ||
             !parseOptionalTextElement(root, "accessor", {}, &object->mAccessor, param.error) ||
             !parseTextElement(root, "name", &object->name, param.error) ||
             !parseOptionalChild(root, TransportArchConverter{}, {}, &object->transportArch,

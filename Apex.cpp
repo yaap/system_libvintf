@@ -104,7 +104,8 @@ status_t GetDeviceVintfDirs(FileSystem* fileSystem, PropertyFetcher* propertyFet
                             std::vector<std::string>* dirs, std::string* error) {
     return GetVintfDirs(fileSystem, propertyFetcher, dirs, error, [](const std::string& path) {
         return StartsWith(path, "/vendor/apex/") || StartsWith(path, "/system/vendor/apex/") ||
-               StartsWith(path, "/odm/apex/") || StartsWith(path, "/system/odm/apex/");
+               StartsWith(path, "/odm/apex/") || StartsWith(path, "/vendor/odm/apex/") ||
+               StartsWith(path, "/system/vendor/odm/apex/");
     });
 }
 
