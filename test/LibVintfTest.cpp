@@ -6658,6 +6658,47 @@ TEST_F(DeviceCompatibilityMatrixCombineTest, AidlAndHidlNames) {
 
 // clang-format on
 
+TEST(FileSystem, PathReplacingFileSystem) {
+    std::map<std::string, std::string> files = {
+        {"a/a", "a/a"}, {"aa/aa", "aa/aa"}, {"b/b", "b/b"}, {"bb/bb", "bb/bb"}, {"x/y/z", "x/y/z"},
+    };
+    std::map<std::string, std::string> replacements = {
+        {"a", "b"},
+        {"aa", "bb"},
+        {"x", "a"},
+        {"x/y", "b"},
+    };
+    details::PathReplacingFileSystem fs(std::make_unique<InMemoryFileSystem>(files), replacements);
+
+    std::string fetched;
+    std::vector<std::string> list;
+
+    // no replace
+    ASSERT_EQ(OK, fs.fetch("b/b", &fetched, nullptr));
+    ASSERT_EQ("b/b", fetched);
+
+    // replace
+    ASSERT_EQ(OK, fs.fetch("a/b", &fetched, nullptr));
+    ASSERT_EQ("b/b", fetched);
+    ASSERT_EQ(OK, fs.fetch("aa/bb", &fetched, nullptr));
+    ASSERT_EQ("bb/bb", fetched);
+
+    // "a" doesn't match with "aa"
+    ASSERT_EQ(OK, fs.listFiles("aa/", &list, nullptr));
+    ASSERT_EQ(std::vector{"bb"s}, list);
+
+    // do not replace recursively
+    ASSERT_EQ(OK, fs.fetch("x/a", &fetched, nullptr));
+    ASSERT_EQ("a/a", fetched);
+
+    // longer match wins.
+    ASSERT_EQ(OK, fs.fetch("x/y/b", &fetched, nullptr));
+    ASSERT_EQ("b/b", fetched);
+
+    ASSERT_EQ(OK, fs.fetch("x/a", &fetched, nullptr));
+    ASSERT_EQ("a/a", fetched);
+}
+
 } // namespace vintf
 } // namespace android
 

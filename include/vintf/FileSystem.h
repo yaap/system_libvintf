@@ -17,6 +17,7 @@
 #ifndef ANDROID_VINTF_FILE_SYSTEM_H
 #define ANDROID_VINTF_FILE_SYSTEM_H
 
+#include <map>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -104,8 +105,8 @@ class FileSystemUnderPath : public FileSystem {
 class PathReplacingFileSystem : public FileSystem {
    public:
     // Use |impl| for any actual reads. Owns impl.
-    PathReplacingFileSystem(std::string path_to_override, std::string path_replacement,
-                            std::unique_ptr<FileSystem> impl);
+    PathReplacingFileSystem(std::unique_ptr<FileSystem> impl,
+                            const std::map<std::string, std::string>& path_replacements);
 
     status_t fetch(const std::string& path, std::string* fetched,
                    std::string* error) const override;
@@ -116,9 +117,9 @@ class PathReplacingFileSystem : public FileSystem {
 
    private:
     std::string path_replace(std::string_view path) const;
-    std::string path_to_replace_;
-    std::string path_replacement_;
+
     std::unique_ptr<FileSystem> impl_;
+    std::map<std::string, std::string> path_replacements_;
 };
 }  // namespace details
 }  // namespace vintf
