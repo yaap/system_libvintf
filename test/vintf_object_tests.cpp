@@ -879,9 +879,9 @@ class DeviceManifestTest : public VintfObjectTestBase {
     void expectApex(const std::string& halManifest = apexHalManifest) {
         expectFetchRepeatedly(kApexInfoFile, R"(<apex-info-list>
             <apex-info moduleName="com.test"
-                preinstalledModulePath="/vendor/apex/com.test.apex" isActive="true"/>
+                partition="VENDOR" isActive="true"/>
             <apex-info moduleName="com.novintf"
-                preinstalledModulePath="/vendor/apex/com.novintf.apex" isActive="true"/>
+                partition="VENDOR" isActive="true"/>
         </apex-info-list>)");
         EXPECT_CALL(fetcher(), modifiedTime(kApexInfoFile, _, _))
             .WillOnce(Invoke([](auto, timespec* out, auto){
@@ -1068,7 +1068,7 @@ TEST_F(VendorApexTest, ReadBootstrapApexBeforeApexReady) {
             out = R"(<?xml version="1.0" encoding="utf-8"?>
                 <apex-info-list>
                     <apex-info moduleName="com.vendor.foo"
-                            preinstalledModulePath="/vendor/apex/foo.apex"
+                            partition="VENDOR"
                             isActive="true" />
                 </apex-info-list>)";
             return ::android::OK;
@@ -1244,7 +1244,7 @@ TEST_F(ManifestOverrideTest, NoOverrideForVendorApex) {
         R"(<apex-info-list>
           <apex-info
             moduleName="com.android.foo"
-            preinstalledModulePath="/vendor/apex/com.android.foo.apex"
+            partition="VENDOR"
             isActive="true"/>
         </apex-info-list>)");
     expect("/apex/com.android.foo/etc/vintf/foo.xml",
@@ -1267,7 +1267,7 @@ TEST_F(ManifestOverrideTest, OdmOverridesVendorApex) {
         R"(<apex-info-list>
             <apex-info
                 moduleName="com.android.foo"
-                preinstalledModulePath="/vendor/apex/com.android.foo.apex"
+                partition="VENDOR"
                 isActive="true"/>
             </apex-info-list>)");
     expect("/apex/com.android.foo/etc/vintf/foo.xml",
@@ -2204,7 +2204,7 @@ class FrameworkManifestTest : public VintfObjectTestBase,
             <apex-info-list>
                 <apex-info
                     moduleName="com.system"
-                    preinstalledModulePath="/system/apex/com.system.apex"
+                    partition="SYSTEM"
                     isActive="true"/>
             </apex-info-list>)");
         EXPECT_CALL(fetcher(), modifiedTime(kApexInfoFile, _, _))
