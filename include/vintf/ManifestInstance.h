@@ -77,6 +77,9 @@ class ManifestInstance {
     // For others, return "@version::interface/instance".
     std::string descriptionWithoutPackage() const;
 
+    // Returns name with version. e.g. "android.hardware.camera.device@1"
+    std::string nameWithVersion() const;
+
     // Return a new ManifestInstance that's the same as this, but with the given version.
     ManifestInstance withVersion(const Version& v) const;
 

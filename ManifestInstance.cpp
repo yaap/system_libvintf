@@ -181,6 +181,19 @@ std::string ManifestInstance::descriptionWithoutPackage() const {
     }
 }
 
+std::string ManifestInstance::nameWithVersion() const {
+    switch (format()) {
+        case HalFormat::HIDL:
+            [[fallthrough]];
+        case HalFormat::NATIVE:
+            return toFQNameString(package(), version());
+            break;
+        case HalFormat::AIDL:
+            return package() + "@" + aidlVersionToString(version());
+            break;
+    }
+}
+
 ManifestInstance ManifestInstance::withVersion(const Version& v) const {
     FqInstance fqInstance;
     CHECK(fqInstance.setTo(getFqInstance().getPackage(), v.majorVer, v.minorVer,
