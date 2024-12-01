@@ -205,6 +205,8 @@ struct XmlNodeConverter {
     // Deserialize XML element |root| into |object|.
     inline bool operator()(Object* object, NodeType* root, const BuildObjectParam& param) const {
         if (nameOf(root) != this->elementName()) {
+            *param.error = "The root name(" + nameOf(root) + ") does not match the element name (" +
+                           this->elementName() + ")";
             return false;
         }
         return this->buildObject(object, root, param);
