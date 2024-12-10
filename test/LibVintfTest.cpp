@@ -145,11 +145,21 @@ public:
     }
 
     ManifestHal createManifestHal(HalFormat format, std::string name, TransportArch ta,
+                                  ExclusiveTo exclusiveTo,
                                   const std::set<FqInstance>& fqInstances) {
         ManifestHal ret;
         ret.format = format;
         ret.name = std::move(name);
+        // AIDL versions are stored in the versions field instead of only in the
+        // FqInstance
+        if (format == HalFormat::AIDL) {
+            for (const auto& fq : fqInstances) {
+                auto [major, minor] = fq.getVersion();
+                ret.versions.push_back({major, minor});
+            }
+        }
         ret.transportArch = ta;
+        ret.exclusiveTo = exclusiveTo;
         std::string error;
         EXPECT_TRUE(ret.insertInstances(fqInstances, false, &error)) << error;
         return ret;
@@ -160,14 +170,14 @@ public:
         vm.mType = SchemaType::DEVICE;
         vm.device.mSepolicyVersion = sepolicyVersion;
         vm.add(createManifestHal(HalFormat::HIDL, "android.hardware.camera",
-                                 {Transport::HWBINDER, Arch::ARCH_EMPTY},
+                                 {Transport::HWBINDER, Arch::ARCH_EMPTY}, ExclusiveTo::EMPTY,
                                  {
                                      *FqInstance::from(2, 0, "ICamera", "legacy/0"),
                                      *FqInstance::from(2, 0, "ICamera", "default"),
                                      *FqInstance::from(2, 0, "IBetterCamera", "camera"),
                                  }));
         vm.add(createManifestHal(HalFormat::HIDL, "android.hardware.nfc",
-                                 {Transport::PASSTHROUGH, Arch::ARCH_32_64},
+                                 {Transport::PASSTHROUGH, Arch::ARCH_32_64}, ExclusiveTo::EMPTY,
                                  std::set({*FqInstance::from(1, 0, "INfc", "default")})));
 
         return vm;
@@ -186,7 +196,7 @@ public:
         vm.mType = SchemaType::FRAMEWORK;
         vm.add(createManifestHal(
             HalFormat::HIDL, "android.hidl.manager", {Transport::HWBINDER, Arch::ARCH_EMPTY},
-            std::set({*FqInstance::from(1, 0, "IServiceManager", "default")})));
+            ExclusiveTo::EMPTY, std::set({*FqInstance::from(1, 0, "IServiceManager", "default")})));
         Vndk vndk2505;
         vndk2505.mVersionRange = {25, 0, 5};
         vndk2505.mLibraries = {"libjpeg.so", "libbase.so"};
@@ -276,6 +286,7 @@ TEST_F(LibVintfTest, FutureManifestCompatible) {
     expectedManifest.add(createManifestHal(HalFormat::HIDL,
                                      "android.hardware.foo",
                                      {Transport::HWBINDER, Arch::ARCH_EMPTY},
+                                     ExclusiveTo::EMPTY,
                                      {*FqInstance::from(1, 0, "IFoo", "default")}));
     std::string manifestXml =
         "<manifest " + kMetaVersionStr + " type=\"device\" might_add=\"true\">\n"
@@ -292,7 +303,8 @@ TEST_F(LibVintfTest, FutureManifestCompatible) {
         "</manifest>\n";
     HalManifest manifest;
     EXPECT_TRUE(fromXml(&manifest, manifestXml));
-    EXPECT_EQ(expectedManifest, manifest);
+    EXPECT_EQ(expectedManifest, manifest) << dump(expectedManifest)
+                                          << " is expected but got " << dump(manifest);
 }
 
 TEST_F(LibVintfTest, HalManifestConverter) {
@@ -724,7 +736,7 @@ static bool insert(std::map<std::string, HalInterface>* map, HalInterface&& intf
 TEST_F(LibVintfTest, MatrixHalConverter) {
     MatrixHal mh{HalFormat::NATIVE, "android.hardware.camera",
             {{VersionRange(1,2,3), VersionRange(4,5,6)}},
-            false /* optional */, false /* updatableViaApex */, {}};
+            false /* optional */, ExclusiveTo::EMPTY, false /* updatableViaApex */, {}};
     EXPECT_TRUE(insert(&mh.interfaces, {"IBetterCamera", {"default", "great"}}));
     EXPECT_TRUE(insert(&mh.interfaces, {"ICamera", {"default"}}));
     std::string xml = toXml(mh);
@@ -836,14 +848,18 @@ TEST_F(LibVintfTest, CompatibilityMatrixConverter) {
     CompatibilityMatrix cm;
     EXPECT_TRUE(add(cm, MatrixHal{HalFormat::NATIVE, "android.hardware.camera",
             {{VersionRange(1,2,3), VersionRange(4,5,6)}},
-            false /* optional */,  false /* updatableViaApex */, testHalInterfaces()}));
+            false /* optional */, ExclusiveTo::EMPTY,  false /* updatableViaApex */,
+            testHalInterfaces()}));
     EXPECT_TRUE(add(cm, MatrixHal{HalFormat::NATIVE, "android.hardware.nfc",
             {{VersionRange(4,5,6), VersionRange(10,11,12)}},
-            true /* optional */,  false /* updatableViaApex */, testHalInterfaces()}));
+            true /* optional */, ExclusiveTo::EMPTY, false /* updatableViaApex */,
+            testHalInterfaces()}));
     EXPECT_TRUE(add(cm, MatrixKernel{KernelVersion(3, 18, 22),
-            {KernelConfig{"CONFIG_FOO", Tristate::YES}, KernelConfig{"CONFIG_BAR", "stringvalue"}}}));
+            {KernelConfig{"CONFIG_FOO", Tristate::YES},
+             KernelConfig{"CONFIG_BAR", "stringvalue"}}}));
     EXPECT_TRUE(add(cm, MatrixKernel{KernelVersion(4, 4, 1),
-            {KernelConfig{"CONFIG_BAZ", 20}, KernelConfig{"CONFIG_BAR", KernelConfigRangeValue{3, 5} }}}));
+            {KernelConfig{"CONFIG_BAZ", 20},
+             KernelConfig{"CONFIG_BAR", KernelConfigRangeValue{3, 5} }}}));
     set(cm, Sepolicy(30, {{25, 0}, {26, 0, 3}, {202404, std::nullopt}}));
     setAvb(cm, Version{2, 1});
     std::string xml = toXml(cm);
@@ -906,7 +922,8 @@ TEST_F(LibVintfTest, DeviceCompatibilityMatrixCoverter) {
     CompatibilityMatrix cm;
     EXPECT_TRUE(add(cm, MatrixHal{HalFormat::NATIVE, "android.hidl.manager",
             {{VersionRange(1,0)}},
-            false /* optional */,  false /* updatableViaApex */, testHalInterfaces()}));
+            false /* optional */, ExclusiveTo::EMPTY, false /* updatableViaApex */,
+            testHalInterfaces()}));
     set(cm, SchemaType::DEVICE);
     set(cm, VndkVersionRange{25,0,1,5}, {"libjpeg.so", "libbase.so"});
     std::string xml = toXml(cm);
@@ -954,8 +971,9 @@ TEST_F(LibVintfTest, CompatibilityMatrixDefaultOptionalTrue) {
 TEST_F(LibVintfTest, IsValid) {
     EXPECT_TRUE(isValid(ManifestHal()));
 
-    auto invalidHal = createManifestHal(HalFormat::HIDL, "android.hardware.camera",
-                                        {Transport::PASSTHROUGH, Arch::ARCH_32_64}, {});
+    auto invalidHal =
+        createManifestHal(HalFormat::HIDL, "android.hardware.camera",
+                          {Transport::PASSTHROUGH, Arch::ARCH_32_64}, ExclusiveTo::EMPTY, {});
     invalidHal.versions = {{Version(2, 0), Version(2, 1)}};
 
     EXPECT_FALSE(isValid(invalidHal));
@@ -986,42 +1004,48 @@ TEST_F(LibVintfTest, HalManifestGetAllHals) {
 TEST_F(LibVintfTest, HalManifestGetHals) {
     HalManifest vm;
 
-    EXPECT_TRUE(add(vm, createManifestHal(HalFormat::HIDL, "android.hardware.camera",
-                                          {Transport::HWBINDER, Arch::ARCH_EMPTY},
-                                          {
-                                              *FqInstance::from(1, 2, "ICamera", "legacy/0"),
-                                              *FqInstance::from(1, 2, "ICamera", "default"),
-                                              *FqInstance::from(1, 2, "IBetterCamera", "camera"),
-                                          })));
-    EXPECT_TRUE(add(vm, createManifestHal(HalFormat::HIDL, "android.hardware.camera",
-                                          {Transport::HWBINDER, Arch::ARCH_EMPTY},
-                                          {
-                                              *FqInstance::from(2, 0, "ICamera", "legacy/0"),
-                                              *FqInstance::from(2, 0, "ICamera", "default"),
-                                              *FqInstance::from(2, 0, "IBetterCamera", "camera"),
-                                          })));
+    EXPECT_TRUE(
+        add(vm, createManifestHal(HalFormat::HIDL, "android.hardware.camera",
+                                  {Transport::HWBINDER, Arch::ARCH_EMPTY}, ExclusiveTo::EMPTY,
+                                  {
+                                      *FqInstance::from(1, 2, "ICamera", "legacy/0"),
+                                      *FqInstance::from(1, 2, "ICamera", "default"),
+                                      *FqInstance::from(1, 2, "IBetterCamera", "camera"),
+                                  })));
+    EXPECT_TRUE(
+        add(vm, createManifestHal(HalFormat::HIDL, "android.hardware.camera",
+                                  {Transport::HWBINDER, Arch::ARCH_EMPTY}, ExclusiveTo::EMPTY,
+                                  {
+                                      *FqInstance::from(2, 0, "ICamera", "legacy/0"),
+                                      *FqInstance::from(2, 0, "ICamera", "default"),
+                                      *FqInstance::from(2, 0, "IBetterCamera", "camera"),
+                                  })));
 
-    EXPECT_TRUE(add(vm, createManifestHal(HalFormat::HIDL, "android.hardware.nfc",
-                                          {Transport::PASSTHROUGH, Arch::ARCH_32_64},
-                                          {*FqInstance::from(1, 0, "INfc", "default"),
-                                           *FqInstance::from(2, 1, "INfc", "default")})));
+    EXPECT_TRUE(
+        add(vm, createManifestHal(HalFormat::HIDL, "android.hardware.nfc",
+                                  {Transport::PASSTHROUGH, Arch::ARCH_32_64}, ExclusiveTo::EMPTY,
+                                  {*FqInstance::from(1, 0, "INfc", "default"),
+                                   *FqInstance::from(2, 1, "INfc", "default")})));
 
-    ManifestHal expectedCameraHalV1_2 = createManifestHal(
-        HalFormat::HIDL, "android.hardware.camera", {Transport::HWBINDER, Arch::ARCH_EMPTY},
-        {
-            *FqInstance::from(1, 2, "ICamera", "legacy/0"),
-            *FqInstance::from(1, 2, "ICamera", "default"),
-            *FqInstance::from(1, 2, "IBetterCamera", "camera"),
-        });
-    ManifestHal expectedCameraHalV2_0 = createManifestHal(
-        HalFormat::HIDL, "android.hardware.camera", {Transport::HWBINDER, Arch::ARCH_EMPTY},
-        {
-            *FqInstance::from(2, 0, "ICamera", "legacy/0"),
-            *FqInstance::from(2, 0, "ICamera", "default"),
-            *FqInstance::from(2, 0, "IBetterCamera", "camera"),
-        });
+    ManifestHal expectedCameraHalV1_2 =
+        createManifestHal(HalFormat::HIDL, "android.hardware.camera",
+                          {Transport::HWBINDER, Arch::ARCH_EMPTY}, ExclusiveTo::EMPTY,
+                          {
+                              *FqInstance::from(1, 2, "ICamera", "legacy/0"),
+                              *FqInstance::from(1, 2, "ICamera", "default"),
+                              *FqInstance::from(1, 2, "IBetterCamera", "camera"),
+                          });
+    ManifestHal expectedCameraHalV2_0 =
+        createManifestHal(HalFormat::HIDL, "android.hardware.camera",
+                          {Transport::HWBINDER, Arch::ARCH_EMPTY}, ExclusiveTo::EMPTY,
+                          {
+                              *FqInstance::from(2, 0, "ICamera", "legacy/0"),
+                              *FqInstance::from(2, 0, "ICamera", "default"),
+                              *FqInstance::from(2, 0, "IBetterCamera", "camera"),
+                          });
     ManifestHal expectedNfcHal = createManifestHal(
         HalFormat::HIDL, "android.hardware.nfc", {Transport::PASSTHROUGH, Arch::ARCH_32_64},
+        ExclusiveTo::EMPTY,
         {*FqInstance::from(1, 0, "INfc", "default"), *FqInstance::from(2, 1, "INfc", "default")});
 
     auto cameraHals = getHals(vm, "android.hardware.camera");
@@ -1040,12 +1064,14 @@ TEST_F(LibVintfTest, CompatibilityMatrixGetHals) {
                                   "android.hardware.camera",
                                   {{VersionRange(1, 2, 3), VersionRange(4, 5, 6)}},
                                   false /* optional */,
+                                  ExclusiveTo::EMPTY,
                                   false /* updatableViaApex */,
                                   testHalInterfaces()}));
     EXPECT_TRUE(add(cm, MatrixHal{HalFormat::NATIVE,
                                   "android.hardware.nfc",
                                   {{VersionRange(4, 5, 6), VersionRange(10, 11, 12)}},
                                   true /* optional */,
+                                  ExclusiveTo::EMPTY,
                                   false /* updatableViaApex */,
                                   testHalInterfaces()}));
 
@@ -1054,6 +1080,7 @@ TEST_F(LibVintfTest, CompatibilityMatrixGetHals) {
         "android.hardware.camera",
         {{VersionRange(1, 2, 3), VersionRange(4, 5, 6)}},
         false /* optional */,
+        ExclusiveTo::EMPTY,
         false /* updatableViaApex */,
         testHalInterfaces(),
     };
@@ -1061,6 +1088,7 @@ TEST_F(LibVintfTest, CompatibilityMatrixGetHals) {
                                          "android.hardware.nfc",
                                          {{VersionRange(4, 5, 6), VersionRange(10, 11, 12)}},
                                          true /* optional */,
+                                         ExclusiveTo::EMPTY,
                                          false /* updatableViaApex */,
                                          testHalInterfaces()};
     auto cameraHals = getHals(cm, "android.hardware.camera");
@@ -5619,6 +5647,258 @@ TEST_F(LibVintfTest, RuntimeInfoGkiReleaseV) {
     EXPECT_EQ(OK, parseGkiKernelRelease(RuntimeInfo::FetchFlag::KERNEL_FCM, "6.1.0-android15-0",
                                         nullptr, &level));
     EXPECT_EQ(Level::V, level);
+}
+
+TEST_F(LibVintfTest, AccessEntryInManifest) {
+    HalManifest expectedManifest;
+    expectedManifest.add(createManifestHal(HalFormat::AIDL, "android.hardware.foo",
+                                           {Transport::EMPTY, Arch::ARCH_EMPTY}, ExclusiveTo::VM,
+                                           {*FqInstance::from(SIZE_MAX, 1, "IFoo", "default")}));
+    std::string manifestXml = "<manifest " + kMetaVersionStr +
+                              " type=\"device\">\n"
+                              "    <hal format=\"aidl\" exclusive-to=\"virtual-machine\">\n"
+                              "        <name>android.hardware.foo</name>\n"
+                              "        <version>1</version>\n"
+                              "        <interface>\n"
+                              "            <name>IFoo</name>\n"
+                              "            <instance>default</instance>\n"
+                              "        </interface>\n"
+                              "    </hal>\n"
+                              "</manifest>\n";
+    HalManifest manifest;
+    EXPECT_TRUE(fromXml(&manifest, manifestXml));
+    EXPECT_EQ(expectedManifest, manifest)
+        << dump(expectedManifest) << " is expected but got " << dump(manifest);
+}
+
+TEST_F(LibVintfTest, NoAccessEntryInManifestIsEmpty) {
+    HalManifest expectedManifest;
+    expectedManifest.add(createManifestHal(HalFormat::AIDL, "android.hardware.foo",
+                                           {Transport::EMPTY, Arch::ARCH_EMPTY}, ExclusiveTo::EMPTY,
+                                           {*FqInstance::from(SIZE_MAX, 1, "IFoo", "default")}));
+    std::string manifestXml = "<manifest " + kMetaVersionStr +
+                              " type=\"device\">\n"
+                              "    <hal format=\"aidl\">\n"
+                              "        <name>android.hardware.foo</name>\n"
+                              "        <version>1</version>\n"
+                              "        <interface>\n"
+                              "            <name>IFoo</name>\n"
+                              "            <instance>default</instance>\n"
+                              "        </interface>\n"
+                              "    </hal>\n"
+                              "</manifest>\n";
+    HalManifest manifest;
+    EXPECT_TRUE(fromXml(&manifest, manifestXml));
+    EXPECT_EQ(expectedManifest, manifest)
+        << dump(expectedManifest) << " is expected but got " << dump(manifest);
+}
+
+TEST_F(LibVintfTest, UnknownAccessEntryInManifestIsEmpty) {
+    HalManifest expectedManifest;
+    expectedManifest.add(createManifestHal(HalFormat::AIDL, "android.hardware.foo",
+                                           {Transport::EMPTY, Arch::ARCH_EMPTY}, ExclusiveTo::EMPTY,
+                                           {*FqInstance::from(SIZE_MAX, 1, "IFoo", "default")}));
+    std::string manifestXml = "<manifest " + kMetaVersionStr +
+                              " type=\"device\">\n"
+                              "    <hal format=\"aidl\" exclusive-to=\"blooper\">\n"
+                              "        <name>android.hardware.foo</name>\n"
+                              "        <version>1</version>\n"
+                              "        <interface>\n"
+                              "            <name>IFoo</name>\n"
+                              "            <instance>default</instance>\n"
+                              "        </interface>\n"
+                              "    </hal>\n"
+                              "</manifest>\n";
+    HalManifest manifest;
+    std::string error;
+    EXPECT_FALSE(fromXml(&manifest, manifestXml, &error));
+    EXPECT_EQ(error,
+              "Could not parse element with name <hal> in element <manifest>: Unknown value "
+              "(\"blooper\") for attribute 'exclusive-to' is considered a failure.");
+}
+
+TEST_F(LibVintfTest, AccessEntryInMatrix) {
+    MatrixHal mh{HalFormat::AIDL,
+                 "android.hardware.foo",
+                 {{SIZE_MAX, 1}},
+                 false /* optional */,
+                 ExclusiveTo::VM,
+                 false /* updatableViaApex */,
+                 {}};
+    EXPECT_TRUE(insert(&mh.interfaces, {"IFoo", {"default"}}));
+    std::string xml = toXml(mh);
+    EXPECT_EQ(xml,
+              "<hal format=\"aidl\" optional=\"false\" exclusive-to=\"virtual-machine\">\n"
+              "    <name>android.hardware.foo</name>\n"
+              "    <interface>\n"
+              "        <name>IFoo</name>\n"
+              "        <instance>default</instance>\n"
+              "    </interface>\n"
+              "</hal>\n");
+    MatrixHal mh2;
+    EXPECT_TRUE(fromXml(&mh2, xml));
+    EXPECT_EQ(mh, mh2);
+}
+
+TEST_F(LibVintfTest, NoAccessEntryInMatrix) {
+    MatrixHal mh{HalFormat::AIDL,
+                 "android.hardware.foo",
+                 {{SIZE_MAX, 1}},
+                 false /* optional */,
+                 ExclusiveTo::EMPTY,
+                 false /* updatableViaApex */,
+                 {}};
+    EXPECT_TRUE(insert(&mh.interfaces, {"IFoo", {"default"}}));
+    std::string xml = toXml(mh);
+    EXPECT_EQ(xml,
+              "<hal format=\"aidl\" optional=\"false\">\n"
+              "    <name>android.hardware.foo</name>\n"
+              "    <interface>\n"
+              "        <name>IFoo</name>\n"
+              "        <instance>default</instance>\n"
+              "    </interface>\n"
+              "</hal>\n");
+    MatrixHal mh2;
+    EXPECT_TRUE(fromXml(&mh2, xml));
+    EXPECT_EQ(mh, mh2);
+}
+
+// Specific access desired and declared
+TEST_F(LibVintfTest, AccessCompatibleSimple) {
+    CompatibilityMatrix cm;
+    HalManifest manifest;
+    std::string xml;
+    std::string error;
+
+    xml = "<compatibility-matrix " + kMetaVersionStr +
+          " type=\"framework\">\n"
+          "    <hal format=\"aidl\" exclusive-to=\"virtual-machine\">\n"
+          "        <name>android.hardware.foo</name>\n"
+          "        <interface>\n"
+          "            <name>IFoo</name>\n"
+          "            <instance>default</instance>\n"
+          "        </interface>\n"
+          "    </hal>\n"
+          "    <sepolicy>\n"
+          "        <kernel-sepolicy-version>30</kernel-sepolicy-version>\n"
+          "        <sepolicy-version>25.5</sepolicy-version>\n"
+          "    </sepolicy>\n"
+          "</compatibility-matrix>\n";
+    EXPECT_TRUE(fromXml(&cm, xml, &error)) << error;
+
+    xml = "<manifest " + kMetaVersionStr +
+          " type=\"device\">\n"
+          "    <hal format=\"aidl\" exclusive-to=\"virtual-machine\">\n"
+          "        <name>android.hardware.foo</name>\n"
+          "        <version>1</version>\n"
+          "        <interface>\n"
+          "            <name>IFoo</name>\n"
+          "            <instance>default</instance>\n"
+          "        </interface>\n"
+          "    </hal>\n"
+          "    <sepolicy>\n"
+          "        <version>25.5</version>\n"
+          "    </sepolicy>\n"
+          "</manifest>\n";
+    EXPECT_TRUE(fromXml(&manifest, xml, &error)) << error;
+
+    EXPECT_TRUE(manifest.checkCompatibility(cm, &error)) << error;
+}
+
+// FCM expects specific access, but device provides normal access to host
+TEST_F(LibVintfTest, AccessIncompatibleNoAccess) {
+    CompatibilityMatrix cm;
+    HalManifest manifest;
+    std::string xml;
+    std::string error;
+
+    xml = "<compatibility-matrix " + kMetaVersionStr +
+          " type=\"framework\">\n"
+          "    <hal format=\"aidl\" optional=\"false\" exclusive-to=\"virtual-machine\">\n"
+          "        <name>android.hardware.foo</name>\n"
+          "        <interface>\n"
+          "            <name>IFoo</name>\n"
+          "            <instance>default</instance>\n"
+          "        </interface>\n"
+          "    </hal>\n"
+          "    <sepolicy>\n"
+          "        <kernel-sepolicy-version>30</kernel-sepolicy-version>\n"
+          "        <sepolicy-version>25.5</sepolicy-version>\n"
+          "    </sepolicy>\n"
+          "</compatibility-matrix>\n";
+    EXPECT_TRUE(fromXml(&cm, xml, &error)) << error;
+
+    xml = "<manifest " + kMetaVersionStr +
+          " type=\"device\">\n"
+          "    <hal format=\"aidl\">\n"
+          "        <name>android.hardware.foo</name>\n"
+          "        <version>1</version>\n"
+          "        <interface>\n"
+          "            <name>IFoo</name>\n"
+          "            <instance>default</instance>\n"
+          "        </interface>\n"
+          "    </hal>\n"
+          "    <sepolicy>\n"
+          "        <version>25.5</version>\n"
+          "    </sepolicy>\n"
+          "</manifest>\n";
+    EXPECT_TRUE(fromXml(&manifest, xml, &error)) << error;
+
+    EXPECT_TRUE(manifest.checkCompatibility(cm, &error)) << error;
+
+    // Error comes from unused HALs because the manifest provided a service
+    // with access that the matrix doesn't expect
+    auto unused = checkUnusedHals(manifest, cm);
+    EXPECT_FALSE(unused.empty())
+        << "Should conatin 'android.hardware.foo' HAL with ExclusiveTo::EMPTY but doesn't";
+}
+
+// FCM expects normal, non-exclusive, access for service but device
+// only provides exclusive access to virtual-machine clients
+TEST_F(LibVintfTest, AccessIncompatibleWrongAccess) {
+    CompatibilityMatrix cm;
+    HalManifest manifest;
+    std::string xml;
+    std::string error;
+
+    xml = "<compatibility-matrix " + kMetaVersionStr +
+          " type=\"framework\">\n"
+          "    <hal format=\"aidl\">\n"
+          "        <name>android.hardware.foo</name>\n"
+          "        <interface>\n"
+          "            <name>IFoo</name>\n"
+          "            <instance>default</instance>\n"
+          "        </interface>\n"
+          "    </hal>\n"
+          "    <sepolicy>\n"
+          "        <kernel-sepolicy-version>30</kernel-sepolicy-version>\n"
+          "        <sepolicy-version>25.5</sepolicy-version>\n"
+          "    </sepolicy>\n"
+          "</compatibility-matrix>\n";
+    EXPECT_TRUE(fromXml(&cm, xml, &error)) << error;
+
+    xml = "<manifest " + kMetaVersionStr +
+          " type=\"device\">\n"
+          "    <hal format=\"aidl\" exclusive-to=\"virtual-machine\">\n"
+          "        <name>android.hardware.foo</name>\n"
+          "        <version>1</version>\n"
+          "        <interface>\n"
+          "            <name>IFoo</name>\n"
+          "            <instance>default</instance>\n"
+          "        </interface>\n"
+          "    </hal>\n"
+          "    <sepolicy>\n"
+          "        <version>25.5</version>\n"
+          "    </sepolicy>\n"
+          "</manifest>\n";
+    EXPECT_TRUE(fromXml(&manifest, xml, &error)) << error;
+
+    EXPECT_TRUE(manifest.checkCompatibility(cm, &error)) << error;
+    // Error comes from unused HALs because the manifest provided a service
+    // with access that the matrix doesn't expect
+    auto unused = checkUnusedHals(manifest, cm);
+    EXPECT_FALSE(unused.empty())
+        << "Should contain 'android.hardware.foo' HAL with ExclusiveTo::VM but doesn't";
 }
 
 class ManifestMissingITest : public LibVintfTest,

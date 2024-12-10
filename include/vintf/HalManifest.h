@@ -162,7 +162,8 @@ struct HalManifest : public HalGroup<ManifestHal>,
     bool shouldAddXmlFile(const ManifestXmlFile& toAdd) const override;
 
     bool forEachInstanceOfVersion(
-        HalFormat format, const std::string& package, const Version& expectVersion,
+        HalFormat format, ExclusiveTo exclusiveTo, const std::string& package,
+        const Version& expectVersion,
         const std::function<bool(const ManifestInstance&)>& func) const override;
 
     bool forEachNativeInstance(const std::string& package,
@@ -206,13 +207,14 @@ struct HalManifest : public HalGroup<ManifestHal>,
     bool empty() const;
 
     // Alternative to forEachInstance if you just need a set of instance names instead.
-    std::set<std::string> getInstances(HalFormat format, const std::string& package,
-                                       const Version& version,
+    std::set<std::string> getInstances(HalFormat format, ExclusiveTo exclusiveTo,
+                                       const std::string& package, const Version& version,
                                        const std::string& interfaceName) const;
 
     // Return whether instance is in getInstances(...).
-    bool hasInstance(HalFormat format, const std::string& package, const Version& version,
-                     const std::string& interfaceName, const std::string& instance) const;
+    bool hasInstance(HalFormat format, ExclusiveTo exclusiveTo, const std::string& package,
+                     const Version& version, const std::string& interfaceName,
+                     const std::string& instance) const;
 
     // Get the <kernel> tag. Assumes type() == DEVICE.
     // - On host, <kernel> tag only exists for the fully assembled HAL manifest.

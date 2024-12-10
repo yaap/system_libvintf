@@ -3,6 +3,8 @@ package hal.manifest {
 
   public class Hal {
     ctor public Hal();
+    method public java.util.List<java.lang.String> getAccessor();
+    method public String getExclusiveTo();
     method public String getFormat();
     method public java.util.List<java.lang.String> getFqname();
     method public String getMaxLevel();
@@ -14,6 +16,7 @@ package hal.manifest {
     method public String getUpdatableViaSystem();
     method public java.util.List<java.lang.String> getVersion();
     method public java.util.List<hal.manifest.Interface> get_interface();
+    method public void setExclusiveTo(String);
     method public void setFormat(String);
     method public void setMaxLevel(String);
     method public void setMinLevel(String);

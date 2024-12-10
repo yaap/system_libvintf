@@ -24,6 +24,7 @@
 #include <string>
 #include <vector>
 
+#include <vintf/ExclusiveTo.h>
 #include <vintf/FqInstance.h>
 #include <vintf/HalFormat.h>
 #include <vintf/HalInterface.h>
@@ -48,6 +49,10 @@ struct ManifestHal : public WithFileName {
     std::string name;
     std::vector<Version> versions;
     TransportArch transportArch;
+    // If this is set to something other than EMPTY, the service is only
+    // accessible by specific means like through a Trusty VM, and not
+    // available on the host device.
+    ExclusiveTo exclusiveTo = ExclusiveTo::EMPTY;
 
     inline Transport transport() const {
         return transportArch.transport;
@@ -57,6 +62,7 @@ struct ManifestHal : public WithFileName {
     inline std::optional<std::string> ip() const { return transportArch.ip; }
     inline std::optional<uint64_t> port() const { return transportArch.port; }
 
+    ExclusiveTo getExclusiveTo() const { return exclusiveTo; }
     inline const std::string& getName() const { return name; }
     inline bool updatableViaSystem() const { return mUpdatableViaSystem; }
 

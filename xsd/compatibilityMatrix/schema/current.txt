@@ -48,6 +48,7 @@ package compatibility.matrix {
 
   public class Hal {
     ctor public Hal();
+    method public String getExclusiveTo();
     method public String getFormat();
     method public java.util.List<java.lang.String> getFqname();
     method public String getName();
@@ -55,6 +56,7 @@ package compatibility.matrix {
     method public boolean getUpdatableViaApex();
     method public java.util.List<java.lang.String> getVersion();
     method public java.util.List<compatibility.matrix.Interface> get_interface();
+    method public void setExclusiveTo(String);
     method public void setFormat(String);
     method public void setName(String);
     method public void setOptional(String);
