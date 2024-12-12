@@ -111,48 +111,78 @@ bool HalManifest::addingConflictingFqInstance(const ManifestHal& halToAdd,
     // Key: FqInstance with minor version 0
     // Value: original HAL and FqInstance
     std::map<FqInstance, std::tuple<const ManifestHal*, ManifestInstance>> existing;
+    std::map<std::string, std::tuple<const ManifestHal*, ManifestInstance>> existingAccessors;
     for (auto it = existingHals.first; it != existingHals.second; ++it) {
         const ManifestHal& existingHal = it->second;
-        bool success =
-            existingHal.forEachInstance([&existingHal, &existing](const auto& manifestInstance) {
+        bool success = existingHal.forEachInstance(
+            [&existingHal, &existing, &existingAccessors](const auto& manifestInstance) {
                 auto versionZero = manifestInstance.version().withMinor(0);
                 auto key = manifestInstance.withVersion(versionZero).getFqInstance();
                 // Assume integrity on existingHals, so no check on emplace().second
                 existing.emplace(key, std::make_tuple(&existingHal, manifestInstance));
+                if (auto accessor = manifestInstance.accessor(); accessor.has_value()) {
+                    existingAccessors.emplace(accessor.value(),
+                                              std::make_tuple(&existingHal, manifestInstance));
+                }
                 return true;  // continue
             });
         if (!success) {
             return false;
         }
     }
-    return halToAdd.forEachInstance(
-        [&halToAdd, &existing, error](const auto& manifestInstanceToAdd) {
-            auto versionZero = manifestInstanceToAdd.version().withMinor(0);
-            auto key = manifestInstanceToAdd.withVersion(versionZero).getFqInstance();
-
-            auto&& [existingIt, inserted] =
-                existing.emplace(key, std::make_tuple(&halToAdd, manifestInstanceToAdd));
-            if (inserted) {
-                return true;  // continue
+    return halToAdd.forEachInstance([&halToAdd, &existing, &existingAccessors,
+                                     &error](const auto& manifestInstanceToAdd) {
+        auto constructErrorMessage = [&halToAdd, &manifestInstanceToAdd](
+                                         const auto& existingManifestInstance,
+                                         const auto& existingHal) {
+            std::string errorMsg = existingManifestInstance.descriptionWithoutPackage();
+            if (!existingHal->fileName().empty()) {
+                errorMsg += " (from " + existingHal->fileName() + ")";
             }
+            errorMsg += " vs. " + manifestInstanceToAdd.descriptionWithoutPackage();
+            if (!halToAdd.fileName().empty()) {
+                errorMsg += " (from " + halToAdd.fileName() + ")";
+            }
+            return errorMsg;
+        };
 
+        auto versionZero = manifestInstanceToAdd.version().withMinor(0);
+        auto key = manifestInstanceToAdd.withVersion(versionZero).getFqInstance();
+
+        // Check duplicate FqInstance.
+        auto&& [existingIt, inserted] =
+            existing.emplace(key, std::make_tuple(&halToAdd, manifestInstanceToAdd));
+        if (!inserted) {
             if (error) {
                 auto&& [existingHal, existingManifestInstance] = existingIt->second;
                 *error = "Conflicting FqInstance: ";
-                *error += existingManifestInstance.descriptionWithoutPackage();
-                if (!existingHal->fileName().empty()) {
-                    *error += " (from " + existingHal->fileName() + ")";
-                }
-                *error += " vs. " + manifestInstanceToAdd.descriptionWithoutPackage();
-                if (!halToAdd.fileName().empty()) {
-                    *error += " (from " + halToAdd.fileName() + ")";
-                }
+                *error += constructErrorMessage(existingManifestInstance, existingHal);
                 *error +=
                     ". Check whether or not multiple modules providing the same HAL are installed.";
             }
-
             return false;  // break and let addingConflictingFqInstance return false
-        });
+        }
+
+        // Check duplicate accessor.
+        auto accessor = manifestInstanceToAdd.accessor();
+        if (!accessor.has_value()) {
+            return true;
+        }
+        auto&& [existingAccessorIt, insertedAccessor] = existingAccessors.emplace(
+            accessor.value(), std::make_tuple(&halToAdd, manifestInstanceToAdd));
+        if (insertedAccessor) {
+            return true;
+        }
+        if (error) {
+            auto&& [existingHal, existingManifestInstance] = existingAccessorIt->second;
+            *error = "Conflicting Accessor: ";
+            *error += constructErrorMessage(existingManifestInstance, existingHal);
+            *error +=
+                ". Check whether or not multiple modules providing the same accessor are "
+                "installed.";
+        }
+        return false;  // break and let addingConflictingFqInstance return false
+    });
 }
 
 // Remove elements from "list" if p(element) returns true.

@@ -8,6 +8,9 @@
     },
     {
       "name": "lshal_test"
+    },
+    {
+      "name": "vts_halManifest_validate_test"
     }
   ],
   "hwasan-presubmit": [

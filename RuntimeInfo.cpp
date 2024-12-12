@@ -199,6 +199,9 @@ Level RuntimeInfo::gkiAndroidReleaseToLevel(uint64_t androidRelease) {
             case 15: {
                 ret = Level::V;
             } break;
+            case 16: {
+                ret = Level::W;
+            } break;
             // Add more levels above this line.
             default: {
                 LOG(FATAL) << "Convert Android " << androidRelease << " to level '" << ret

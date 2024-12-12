@@ -28,10 +28,6 @@ using base::ParseUint;
 
 namespace vintf {
 
-static const std::string kRequired("required");
-static const std::string kOptional("optional");
-static const std::string kConfigPrefix("CONFIG_");
-
 std::vector<std::string> SplitString(const std::string &s, char c) {
     std::vector<std::string> components;
 

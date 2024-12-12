@@ -43,6 +43,7 @@ enum class Level : size_t {
     T = 7,
     U = 8,
     V = 202404,
+    W = 202504,  // TODO(346861728) placeholder letter/number.
     // To add new values:
     // (1) add above this line.
     // (2) edit array below
@@ -68,6 +69,7 @@ inline bool IsValid(Level level) {
         Level::T,
         Level::U,
         Level::V,
+        Level::W,
         Level::UNSPECIFIED,
         // clang-format on
     };
