@@ -15,7 +15,8 @@
  */
 #include "Apex.h"
 
-#include <android-base/format.h>
+#include <format>
+
 #include <android-base/logging.h>
 #include <android-base/strings.h>
 
@@ -71,7 +72,7 @@ static status_t GetVintfDirs(FileSystem* fileSystem, PropertyFetcher* propertyFe
         if (!apexInfo.getIsActive()) continue;
 
         if (filter(apexInfo.getPartition())) {
-            dirs->push_back(fmt::format("{}/{}/" VINTF_SUB_DIR, apexDir, apexInfo.getModuleName()));
+            dirs->push_back(std::format("{}/{}/" VINTF_SUB_DIR, apexDir, apexInfo.getModuleName()));
         }
     }
     LOG(INFO) << "Loaded APEX Infos from " << apexInfoFile;
