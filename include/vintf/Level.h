@@ -44,6 +44,7 @@ enum class Level : size_t {
     U = 8,
     V = 202404,
     B = 202504,
+    C = 202604,
     // To add new values:
     // (1) add above this line.
     // (2) edit array below
@@ -70,6 +71,7 @@ inline bool IsValid(Level level) {
         Level::U,
         Level::V,
         Level::B,
+        Level::C,
         Level::UNSPECIFIED,
         // clang-format on
     };
