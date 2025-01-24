@@ -21,6 +21,7 @@
 
 #include <dirent.h>
 
+#include <algorithm>
 #include <mutex>
 #include <set>
 

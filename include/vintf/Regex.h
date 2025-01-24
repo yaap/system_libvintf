@@ -18,6 +18,7 @@
 #define ANDROID_VINTF_REGEX_H_
 
 #include <regex.h>
+#include <memory>
 #include <string>
 
 namespace android {

@@ -17,6 +17,7 @@
 #ifndef ANDROID_VINTF_HAL_GROUP_H
 #define ANDROID_VINTF_HAL_GROUP_H
 
+#include <functional>
 #include <map>
 #include <set>
 

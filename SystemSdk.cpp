@@ -17,6 +17,7 @@
 #include "SystemSdk.h"
 
 #include <algorithm>
+#include <iterator>
 
 namespace android {
 namespace vintf {
