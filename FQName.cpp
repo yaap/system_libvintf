@@ -19,6 +19,7 @@
 #include <android-base/logging.h>
 #include <android-base/parseint.h>
 #include <android-base/strings.h>
+#include <constants-private.h>
 #include <iostream>
 #include <sstream>
 
@@ -44,7 +45,7 @@ bool FQName::setTo(const std::string& package, size_t majorVer, size_t minorVer,
     mName = name;
 
     FQName other;
-    if (!parse(string(), &other)) return false;
+    if (!parse(parsedString(), &other)) return false;
     if ((*this) != other) return false;
     mIsIdentifier = other.isIdentifier();
     return true;
@@ -186,11 +187,27 @@ std::string FQName::version() const {
     if (!hasVersion()) {
         return "";
     }
+    if (mMajor == details::kFakeAidlMajorVersion) {
+        return std::to_string(mMinor);
+    }
+    return std::to_string(mMajor) + "." + std::to_string(mMinor);
+}
+
+std::string FQName::parsedVersion() const {
+    if (!hasVersion()) {
+        return "";
+    }
+
     return std::to_string(mMajor) + "." + std::to_string(mMinor);
 }
 
 std::string FQName::atVersion() const {
     std::string v = version();
+    return v.empty() ? "" : ("@" + v);
+}
+
+std::string FQName::parsedAtVersion() const {
+    std::string v = parsedVersion();
     return v.empty() ? "" : ("@" + v);
 }
 
@@ -242,6 +259,20 @@ const std::string& FQName::name() const {
     return mName;
 }
 
+std::string FQName::parsedString() const {
+    std::string out;
+    out.append(mPackage);
+    out.append(parsedAtVersion());
+    if (!mName.empty()) {
+        if (!mPackage.empty() || !parsedVersion().empty()) {
+            out.append("::");
+        }
+        out.append(mName);
+    }
+
+    return out;
+}
+
 std::string FQName::string() const {
     std::string out;
     out.append(mPackage);
@@ -261,7 +292,7 @@ bool FQName::operator<(const FQName& other) const {
 }
 
 bool FQName::operator==(const FQName& other) const {
-    return string() == other.string();
+    return parsedString() == other.parsedString();
 }
 
 bool FQName::operator!=(const FQName& other) const {

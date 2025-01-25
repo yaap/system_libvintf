@@ -248,7 +248,11 @@ bool parse(const std::string& s, SepolicyVersion* sepolicyVer) {
 }
 
 std::ostream &operator<<(std::ostream &os, const Version &ver) {
-    return os << ver.majorVer << "." << ver.minorVer;
+    if (ver.majorVer == details::kFakeAidlMajorVersion) {
+        return os << ver.minorVer;
+    } else {
+        return os << ver.majorVer << "." << ver.minorVer;
+    }
 }
 
 std::ostream& operator<<(std::ostream& os, const SepolicyVersion& ver) {

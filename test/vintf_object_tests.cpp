@@ -284,6 +284,45 @@ const std::string systemMatrixLevel2 =
     "    </hal>\n"
     "</compatibility-matrix>\n";
 
+// Same as systemMatrixLevel2 - used to test the different behavior of
+// deprecating no longer being instance-specific based on the
+// target-level of 202504 or greater
+const std::string systemMatrixLevel202504 =
+    "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"202504\">\n"
+    "    <hal format=\"hidl\" optional=\"true\">\n"
+    "        <name>android.hardware.major</name>\n"
+    "        <version>2.0</version>\n"
+    "        <interface>\n"
+    "            <name>IMajor</name>\n"
+    "            <instance>default</instance>\n"
+    "        </interface>\n"
+    "    </hal>\n"
+    "    <hal format=\"hidl\" optional=\"true\">\n"
+    "        <name>android.hardware.minor</name>\n"
+    "        <version>1.1</version>\n"
+    "        <interface>\n"
+    "            <name>IMinor</name>\n"
+    "            <instance>default</instance>\n"
+    "        </interface>\n"
+    "    </hal>\n"
+    "    <hal format=\"aidl\" optional=\"true\">\n"
+    "        <name>android.hardware.minor</name>\n"
+    "        <version>102</version>\n"
+    "        <interface>\n"
+    "            <name>IMinor</name>\n"
+    "            <instance>default</instance>\n"
+    "        </interface>\n"
+    "    </hal>\n"
+    "    <hal format=\"aidl\" exclusive-to=\"virtual-machine\">\n"
+    "        <name>android.hardware.vm.removed</name>\n"
+    "        <version>3</version>\n"
+    "        <interface>\n"
+    "            <name>IRemoved</name>\n"
+    "            <instance>default</instance>\n"
+    "        </interface>\n"
+    "    </hal>\n"
+    "</compatibility-matrix>\n";
+
 //
 // Smaller product FCMs at different levels to test that framework and product
 // FCMs are combined when checking deprecation.
@@ -1324,11 +1363,13 @@ class DeprecateTest : public VintfObjectTestBase {
                 *out = {
                     "compatibility_matrix.1.xml",
                     "compatibility_matrix.2.xml",
+                    "compatibility_matrix.202504.xml",
                 };
                 return ::android::OK;
             }));
         expectFetchRepeatedly(kSystemVintfDir + "compatibility_matrix.1.xml"s, systemMatrixLevel1);
         expectFetchRepeatedly(kSystemVintfDir + "compatibility_matrix.2.xml"s, systemMatrixLevel2);
+        expectFetchRepeatedly(kSystemVintfDir + "compatibility_matrix.202504.xml"s, systemMatrixLevel202504);
         EXPECT_CALL(fetcher(), listFiles(StrEq(kProductVintfDir), _, _))
             .WillRepeatedly(Invoke([](const auto&, auto* out, auto*) {
                 *out = {
@@ -1528,6 +1569,24 @@ TEST_F(DeprecateTest, HidlMetadataDeprecate) {
         << "major@1.0 should be deprecated. " << error;
 }
 
+TEST_F(DeprecateTest, UnknownInstancesDoNotRespectDeprecation) {
+    expectVendorManifest(Level{2}, {
+        "android.hardware.major@1.0::IMajor/unknown",
+    });
+    std::string error;
+    EXPECT_EQ(NO_DEPRECATED_HALS, vintfObject->checkDeprecation({}, &error))
+        << "major@1.0 should not be deprecated when targeting FCM level < 202504. " << error;
+}
+
+TEST_F(DeprecateTest, UnknownInstancesMustRespectDeprecation) {
+    expectVendorManifest(Level{202504}, {
+        "android.hardware.major@1.0::IMajor/unknown",
+    });
+    std::string error;
+    EXPECT_EQ(DEPRECATED, vintfObject->checkDeprecation({}, &error))
+        << "major@1.0 should be deprecated. " << error;
+}
+
 class RegexInstanceDeprecateTest : public VintfObjectTestBase {
    protected:
     virtual void SetUp() override {
@@ -1615,6 +1674,7 @@ TEST_F(RegexInstanceDeprecateTest, AidlDeprecate) {
     std::string error;
     EXPECT_EQ(DEPRECATED, vintfObject->checkDeprecation({}, &error))
         << "minor@101::IMinor/instance2 is deprecated";
+    EXPECT_IN("minor@101", error);
 }
 
 class MultiMatrixTest : public VintfObjectTestBase {

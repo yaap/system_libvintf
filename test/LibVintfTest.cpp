@@ -5343,10 +5343,9 @@ TEST_F(LibVintfTest, GetTransportHidlHalWithFakeAidlVersion) {
         "</manifest>\n";
     std::string error;
     HalManifest manifest;
-    EXPECT_TRUE(fromXml(&manifest, xml, &error)) << error;
-    EXPECT_EQ(Transport::HWBINDER,
-              manifest.getHidlTransport("android.system.foo", details::kDefaultAidlVersion, "IFoo",
-                                        "default"));
+    EXPECT_FALSE(fromXml(&manifest, xml, &error))
+            << "This should fail to parse";
+    EXPECT_IN("Could not parse text \"@1::IFoo/default\"", error);
 }
 
 TEST_F(LibVintfTest, RejectAidlHalsWithUnsupportedTransport) {
