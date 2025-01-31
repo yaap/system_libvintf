@@ -230,6 +230,14 @@ int VintfFm::update(const FsFactory& vintfFsFactory, const std::string& dir, Lev
 }
 
 int VintfFm::check(const FsFactory& vintfFsFactory, const std::string& dir) {
+    // Treat all HALs in these frozen matrices as mandatory to have installed.
+    // This is a list of HALs that are not installed on all GSIs (like TVs, Wear
+    // devices, automotive).
+    const std::set<std::string> kOptionalInterfaces = {
+        "android.frameworks.cameraservice.service",
+        "android.frameworks.vibrator",
+        "android.hardware.security.keymint",
+    };
     auto frozenMatrices = loadMatrices(dir);
     if (!frozenMatrices.has_value()) {
         return EX_SOFTWARE;
@@ -244,6 +252,31 @@ int VintfFm::check(const FsFactory& vintfFsFactory, const std::string& dir) {
         if (!manifest->checkCompatibility(matrix, &error)) {
             LOG(ERROR) << "Framework manifest is incompatible with frozen matrix at level " << level
                        << ": " << error;
+            return EX_SOFTWARE;
+        }
+        bool mandatoryError = false;
+        matrix.forEachInstance([&](const MatrixInstance& hal) {
+            if (!kOptionalInterfaces.contains(hal.package())) {
+                bool found = false;
+                manifest->forEachInstance([&](const ManifestInstance& manifestHal) {
+                    if (hal.package() == manifestHal.package()) {
+                        found = true;
+                    }
+                    return true;
+                });
+                if (found == false) {
+                    LOG(ERROR) << "ERROR: " << hal.package()
+                               << " is not declared in the VINTF manifest but is mandatory";
+                    mandatoryError = true;
+                }
+            }
+            return true;
+        });
+        if (mandatoryError) {
+            LOG(ERROR) << "ERROR: Framework manifest at level "
+                       << std::to_string(static_cast<size_t>(level))
+                       << " is not compatible with the frozen device matrix:\n    "
+                       << matrix.fileName();
             return EX_SOFTWARE;
         }
     }
@@ -296,6 +329,7 @@ std::optional<VintfFm::FrozenMatrices> VintfFm::loadMatrices(const std::string& 
             LOG(ERROR) << "Unable to parse " << path << ": " << error;
             return std::nullopt;
         }
+        matrix.setFileName(dir + filename);
         std::string_view filenameSv{filename};
         (void)android::base::ConsumeSuffix(&filenameSv, ".xml");
         std::string levelString{filenameSv};
