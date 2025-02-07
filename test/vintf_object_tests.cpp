@@ -1121,7 +1121,7 @@ TEST_F(VendorApexTest, ReadBootstrapApexBeforeApexReady) {
         .WillByDefault(Return(false));
     // Should read bootstrap APEXes from /bootstrap-apex
     EXPECT_CALL(fetcher(), fetch(kBootstrapApexInfoFile, _))
-        .WillOnce(Invoke([](const auto&, auto& out) {
+        .WillRepeatedly(Invoke([](const auto&, auto& out) {
             out = R"(<?xml version="1.0" encoding="utf-8"?>
                 <apex-info-list>
                     <apex-info moduleName="com.vendor.foo"
@@ -1145,7 +1145,7 @@ TEST_F(VendorApexTest, OkayIfBootstrapApexDirDoesntExist) {
         .WillByDefault(Return(false));
     // Should try to read bootstrap APEXes from /bootstrap-apex
     EXPECT_CALL(fetcher(), fetch(kBootstrapApexInfoFile, _))
-        .WillOnce(Invoke([](const auto&, auto&) {
+        .WillRepeatedly(Invoke([](const auto&, auto&) {
             return NAME_NOT_FOUND;
         }));
     // Doesn't fallback to normal APEX if APEXes are not ready.

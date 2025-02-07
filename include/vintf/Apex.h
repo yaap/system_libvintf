@@ -26,8 +26,10 @@
 namespace android::vintf::apex {
 
 std::optional<timespec> GetModifiedTime(FileSystem* fileSystem, PropertyFetcher* propertyFetcher);
-status_t GetDeviceVintfDirs(FileSystem* fileSystem, PropertyFetcher* propertyFetcher,
+status_t GetVendorVintfDirs(FileSystem* fileSystem, PropertyFetcher* propertyFetcher,
                             std::vector<std::string>* out, std::string* error);
+status_t GetOdmVintfDirs(FileSystem* fileSystem, PropertyFetcher* propertyFetcher,
+                         std::vector<std::string>* out, std::string* error);
 status_t GetFrameworkVintfDirs(FileSystem* fileSystem, PropertyFetcher* propertyFetcher,
                                std::vector<std::string>* out, std::string* error);
 

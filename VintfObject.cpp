@@ -279,12 +279,26 @@ status_t VintfObject::addDirectoriesManifests(const std::vector<std::string>& di
     return OK;
 }
 
-// Fetch fragments from apexes originated from /vendor.
-// For now, we don't have /odm apexes.
-status_t VintfObject::fetchDeviceHalManifestApex(HalManifest* out, std::string* error) {
-    std::vector<std::string> dirs;
+// Fetch fragments originated from /vendor including apexes:
+// - /vendor/etc/vintf/manifest/
+// - /apex/{vendor apex}/etc/vintf/
+status_t VintfObject::fetchVendorHalFragments(HalManifest* out, std::string* error) {
+    std::vector<std::string> dirs = {kVendorManifestFragmentDir};
     status_t status =
-        apex::GetDeviceVintfDirs(getFileSystem().get(), getPropertyFetcher().get(), &dirs, error);
+        apex::GetVendorVintfDirs(getFileSystem().get(), getPropertyFetcher().get(), &dirs, error);
+    if (status != OK) {
+        return status;
+    }
+    return addDirectoriesManifests(dirs, out, /*forceSchemaType=*/false, error);
+}
+
+// Fetch fragments originated from /odm including apexes:
+// - /odm/etc/vintf/manifest/
+// - /apex/{odm apex}/etc/vintf/
+status_t VintfObject::fetchOdmHalFragments(HalManifest* out, std::string* error) {
+    std::vector<std::string> dirs = {kOdmManifestFragmentDir};
+    status_t status =
+        apex::GetOdmVintfDirs(getFileSystem().get(), getPropertyFetcher().get(), &dirs, error);
     if (status != OK) {
         return status;
     }
@@ -292,8 +306,8 @@ status_t VintfObject::fetchDeviceHalManifestApex(HalManifest* out, std::string* 
 }
 
 // Priority for loading vendor manifest:
-// 1. Vendor manifest + device fragments (including vapex) + ODM manifest (optional) + odm fragments
-// 2. Vendor manifest + device fragments (including vapex)
+// 1. Vendor manifest + vendor fragments + ODM manifest (optional) + odm fragments
+// 2. Vendor manifest + vendor fragments
 // 3. ODM manifest (optional) + odm fragments
 // 4. /vendor/manifest.xml (legacy, no fragments)
 // where:
@@ -308,15 +322,9 @@ status_t VintfObject::fetchDeviceHalManifest(HalManifest* out, std::string* erro
 
     if (vendorStatus == OK) {
         *out = std::move(vendorManifest);
-        status_t fragmentStatus = addDirectoryManifests(kVendorManifestFragmentDir, out,
-                                                        false /* forceSchemaType*/, error);
+        status_t fragmentStatus = fetchVendorHalFragments(out, error);
         if (fragmentStatus != OK) {
             return fragmentStatus;
-        }
-
-        status_t apexStatus = fetchDeviceHalManifestApex(out, error);
-        if (apexStatus != OK) {
-            return apexStatus;
         }
     }
 
@@ -335,15 +343,13 @@ status_t VintfObject::fetchDeviceHalManifest(HalManifest* out, std::string* erro
                 return UNKNOWN_ERROR;
             }
         }
-        return addDirectoryManifests(kOdmManifestFragmentDir, out, false /* forceSchemaType */,
-                                     error);
+        return fetchOdmHalFragments(out, error);
     }
 
     // vendorStatus != OK, "out" is not changed.
     if (odmStatus == OK) {
         *out = std::move(odmManifest);
-        return addDirectoryManifests(kOdmManifestFragmentDir, out, false /* forceSchemaType */,
-                                     error);
+        return fetchOdmHalFragments(out, error);
     }
 
     // Use legacy /vendor/manifest.xml
