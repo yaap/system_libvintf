@@ -309,12 +309,13 @@ class VintfObject {
                                      HalManifest* manifests, bool ignoreSchemaType,
                                      std::string* error);
     status_t fetchDeviceHalManifest(HalManifest* out, std::string* error = nullptr);
-    status_t fetchDeviceHalManifestApex(HalManifest* out, std::string* error = nullptr);
     status_t fetchDeviceMatrix(CompatibilityMatrix* out, std::string* error = nullptr);
     status_t fetchOdmHalManifest(HalManifest* out, std::string* error = nullptr);
+    status_t fetchOdmHalFragments(HalManifest* out, std::string* error = nullptr);
     status_t fetchOneHalManifest(const std::string& path, HalManifest* out,
                                  std::string* error = nullptr);
     status_t fetchVendorHalManifest(HalManifest* out, std::string* error = nullptr);
+    status_t fetchVendorHalFragments(HalManifest* out, std::string* error = nullptr);
     status_t fetchFrameworkHalManifest(HalManifest* out, std::string* error = nullptr);
     status_t fetchFrameworkHalManifestApex(HalManifest* out, std::string* error = nullptr);
 

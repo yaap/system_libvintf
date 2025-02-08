@@ -1614,7 +1614,7 @@ TEST_F(LibVintfTest, ApexInterfaceShouldBeOkayWithoutApexInfoList) {
     details::PropertyFetcherNoOp pf;
     EXPECT_THAT(apex::GetModifiedTime(&fs, &pf), std::nullopt);
     std::vector<std::string> dirs;
-    ASSERT_EQ(OK, apex::GetDeviceVintfDirs(&fs, &pf, &dirs, nullptr));
+    ASSERT_EQ(OK, apex::GetVendorVintfDirs(&fs, &pf, &dirs, nullptr));
     ASSERT_EQ(dirs, std::vector<std::string>{});
 }
 
