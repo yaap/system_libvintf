@@ -62,17 +62,17 @@ using namespace ::android::vintf::details;
 
 const std::string systemMatrixXml1 =
     "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\">\n"
-    "    <hal format=\"hidl\" optional=\"false\">\n"
+    "    <hal format=\"hidl\">\n"
     "        <name>android.hardware.camera</name>\n"
     "        <version>2.0-5</version>\n"
     "        <version>3.4-16</version>\n"
     "    </hal>\n"
-    "    <hal format=\"hidl\" optional=\"false\">\n"
+    "    <hal format=\"hidl\">\n"
     "        <name>android.hardware.nfc</name>\n"
     "        <version>1.0</version>\n"
     "        <version>2.0</version>\n"
     "    </hal>\n"
-    "    <hal format=\"hidl\" optional=\"true\">\n"
+    "    <hal format=\"hidl\">\n"
     "        <name>android.hardware.foo</name>\n"
     "        <version>1.0</version>\n"
     "    </hal>\n"
@@ -147,7 +147,7 @@ const std::string systemManifestXml1 =
 
 const std::string vendorMatrixXml1 =
     "<compatibility-matrix " + kMetaVersionStr + " type=\"device\">\n"
-    "    <hal format=\"hidl\" optional=\"false\">\n"
+    "    <hal format=\"hidl\">\n"
     "        <name>android.hidl.manager</name>\n"
     "        <version>1.0</version>\n"
     "    </hal>\n"
@@ -159,45 +159,12 @@ const std::string vendorMatrixXml1 =
     "</compatibility-matrix>\n";
 
 //
-// Set of Xml2 metadata compatible with each other.
-//
-
-const std::string systemMatrixXml2 =
-    "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\">\n"
-    "    <hal format=\"hidl\" optional=\"false\">\n"
-    "        <name>android.hardware.foo</name>\n"
-    "        <version>1.0</version>\n"
-    "    </hal>\n"
-    "    <kernel version=\"3.18.31\"></kernel>\n"
-    "    <sepolicy>\n"
-    "        <kernel-sepolicy-version>30</kernel-sepolicy-version>\n"
-    "        <sepolicy-version>25.5</sepolicy-version>\n"
-    "        <sepolicy-version>26.0-3</sepolicy-version>\n"
-    "    </sepolicy>\n"
-    "    <avb>\n"
-    "        <vbmeta-version>0.0</vbmeta-version>\n"
-    "    </avb>\n"
-    "</compatibility-matrix>\n";
-
-const std::string vendorManifestXml2 =
-    "<manifest " + kMetaVersionStr + " type=\"device\">"
-    "    <hal>"
-    "        <name>android.hardware.foo</name>"
-    "        <transport>hwbinder</transport>"
-    "        <version>1.0</version>"
-    "    </hal>"
-    "    <sepolicy>\n"
-    "        <version>25.5</version>\n"
-    "    </sepolicy>\n"
-    "</manifest>";
-
-//
 // Set of framework matrices of different FCM version.
 //
 
 const std::string systemMatrixLevel1 =
     "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
-    "    <hal format=\"hidl\" optional=\"true\">\n"
+    "    <hal format=\"hidl\">\n"
     "        <name>android.hardware.major</name>\n"
     "        <version>1.0</version>\n"
     "        <interface>\n"
@@ -205,7 +172,7 @@ const std::string systemMatrixLevel1 =
     "            <instance>default</instance>\n"
     "        </interface>\n"
     "    </hal>\n"
-    "    <hal format=\"hidl\" optional=\"true\">\n"
+    "    <hal format=\"hidl\">\n"
     "        <name>android.hardware.removed</name>\n"
     "        <version>1.0</version>\n"
     "        <interface>\n"
@@ -213,7 +180,7 @@ const std::string systemMatrixLevel1 =
     "            <instance>default</instance>\n"
     "        </interface>\n"
     "    </hal>\n"
-    "    <hal format=\"hidl\" optional=\"true\">\n"
+    "    <hal format=\"hidl\">\n"
     "        <name>android.hardware.minor</name>\n"
     "        <version>1.0</version>\n"
     "        <interface>\n"
@@ -222,7 +189,7 @@ const std::string systemMatrixLevel1 =
     "            <instance>legacy</instance>\n"
     "        </interface>\n"
     "    </hal>\n"
-    "    <hal format=\"aidl\" optional=\"true\">\n"
+    "    <hal format=\"aidl\">\n"
     "        <name>android.hardware.minor</name>\n"
     "        <version>101</version>\n"
     "        <interface>\n"
@@ -230,7 +197,7 @@ const std::string systemMatrixLevel1 =
     "            <instance>default</instance>\n"
     "        </interface>\n"
     "    </hal>\n"
-    "    <hal format=\"aidl\" optional=\"true\">\n"
+    "    <hal format=\"aidl\">\n"
     "        <name>android.hardware.removed</name>\n"
     "        <version>101</version>\n"
     "        <interface>\n"
@@ -250,7 +217,7 @@ const std::string systemMatrixLevel1 =
 
 const std::string systemMatrixLevel2 =
     "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"2\">\n"
-    "    <hal format=\"hidl\" optional=\"true\">\n"
+    "    <hal format=\"hidl\">\n"
     "        <name>android.hardware.major</name>\n"
     "        <version>2.0</version>\n"
     "        <interface>\n"
@@ -258,7 +225,7 @@ const std::string systemMatrixLevel2 =
     "            <instance>default</instance>\n"
     "        </interface>\n"
     "    </hal>\n"
-    "    <hal format=\"hidl\" optional=\"true\">\n"
+    "    <hal format=\"hidl\">\n"
     "        <name>android.hardware.minor</name>\n"
     "        <version>1.1</version>\n"
     "        <interface>\n"
@@ -266,7 +233,7 @@ const std::string systemMatrixLevel2 =
     "            <instance>default</instance>\n"
     "        </interface>\n"
     "    </hal>\n"
-    "    <hal format=\"aidl\" optional=\"true\">\n"
+    "    <hal format=\"aidl\">\n"
     "        <name>android.hardware.minor</name>\n"
     "        <version>102</version>\n"
     "        <interface>\n"
@@ -289,7 +256,7 @@ const std::string systemMatrixLevel2 =
 // target-level of 202504 or greater
 const std::string systemMatrixLevel202504 =
     "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"202504\">\n"
-    "    <hal format=\"hidl\" optional=\"true\">\n"
+    "    <hal format=\"hidl\">\n"
     "        <name>android.hardware.major</name>\n"
     "        <version>2.0</version>\n"
     "        <interface>\n"
@@ -297,7 +264,7 @@ const std::string systemMatrixLevel202504 =
     "            <instance>default</instance>\n"
     "        </interface>\n"
     "    </hal>\n"
-    "    <hal format=\"hidl\" optional=\"true\">\n"
+    "    <hal format=\"hidl\">\n"
     "        <name>android.hardware.minor</name>\n"
     "        <version>1.1</version>\n"
     "        <interface>\n"
@@ -305,7 +272,7 @@ const std::string systemMatrixLevel202504 =
     "            <instance>default</instance>\n"
     "        </interface>\n"
     "    </hal>\n"
-    "    <hal format=\"aidl\" optional=\"true\">\n"
+    "    <hal format=\"aidl\">\n"
     "        <name>android.hardware.minor</name>\n"
     "        <version>102</version>\n"
     "        <interface>\n"
@@ -330,7 +297,7 @@ const std::string systemMatrixLevel202504 =
 
 const std::string productMatrixLevel1 =
     "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
-    "    <hal format=\"hidl\" optional=\"true\">\n"
+    "    <hal format=\"hidl\">\n"
     "        <name>product.removed</name>\n"
     "        <version>1.0</version>\n"
     "        <interface>\n"
@@ -338,7 +305,7 @@ const std::string productMatrixLevel1 =
     "            <instance>default</instance>\n"
     "        </interface>\n"
     "    </hal>\n"
-    "    <hal format=\"hidl\" optional=\"true\">\n"
+    "    <hal format=\"hidl\">\n"
     "        <name>product.minor</name>\n"
     "        <version>1.0</version>\n"
     "        <interface>\n"
@@ -350,7 +317,7 @@ const std::string productMatrixLevel1 =
 
 const std::string productMatrixLevel2 =
     "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"2\">\n"
-    "    <hal format=\"hidl\" optional=\"true\">\n"
+    "    <hal format=\"hidl\">\n"
     "        <name>product.minor</name>\n"
     "        <version>1.1</version>\n"
     "        <interface>\n"
@@ -367,7 +334,7 @@ const std::string productMatrixLevel2 =
 const static std::vector<std::string> systemMatrixRegexXmls = {
     // 1.xml
     "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
-    "    <hal format=\"hidl\" optional=\"false\">\n"
+    "    <hal format=\"hidl\">\n"
     "        <name>android.hardware.regex</name>\n"
     "        <version>1.0-1</version>\n"
     "        <interface>\n"
@@ -381,7 +348,7 @@ const static std::vector<std::string> systemMatrixRegexXmls = {
     "</compatibility-matrix>\n",
     // 2.xml
     "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"2\">\n"
-    "    <hal format=\"hidl\" optional=\"false\">\n"
+    "    <hal format=\"hidl\">\n"
     "        <name>android.hardware.regex</name>\n"
     "        <version>1.1-2</version>\n"
     "        <interface>\n"
@@ -395,7 +362,7 @@ const static std::vector<std::string> systemMatrixRegexXmls = {
     "</compatibility-matrix>\n",
     // 3.xml
     "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"3\">\n"
-    "    <hal format=\"hidl\" optional=\"false\">\n"
+    "    <hal format=\"hidl\">\n"
     "        <name>android.hardware.regex</name>\n"
     "        <version>2.0</version>\n"
     "        <interface>\n"
@@ -415,7 +382,7 @@ const static std::vector<std::string> systemMatrixRegexXmls = {
 const std::vector<std::string> systemMatrixRequire = {
     // 1.xml
     "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
-    "    <hal format=\"hidl\" optional=\"false\">\n"
+    "    <hal format=\"hidl\">\n"
     "        <name>android.hardware.foo</name>\n"
     "        <version>1.0</version>\n"
     "        <interface>\n"
@@ -426,7 +393,7 @@ const std::vector<std::string> systemMatrixRequire = {
     "</compatibility-matrix>\n",
     // 2.xml
     "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"2\">\n"
-    "    <hal format=\"hidl\" optional=\"false\">\n"
+    "    <hal format=\"hidl\">\n"
     "        <name>android.hardware.bar</name>\n"
     "        <version>1.0</version>\n"
     "        <interface>\n"
@@ -678,29 +645,6 @@ TEST_F(VintfObjectCompatibleTest, TestDeviceCompatibility) {
     ASSERT_STREQ(error.c_str(), "");
 }
 
-// Test fixture that provides incompatible metadata from the mock device.
-class VintfObjectIncompatibleTest : public VintfObjectTestBase {
-   protected:
-    virtual void SetUp() {
-        VintfObjectTestBase::SetUp();
-        setupMockFetcher(vendorManifestXml1, systemMatrixXml2, systemManifestXml1, vendorMatrixXml1);
-    }
-};
-
-// Fetch all metadata from device and ensure that it fails.
-TEST_F(VintfObjectIncompatibleTest, TestDeviceCompatibility) {
-    std::string error;
-
-    expectVendorManifest();
-    expectSystemManifest();
-    expectVendorMatrix();
-    expectSystemMatrix();
-
-    int result = vintfObject->checkCompatibility(&error);
-
-    ASSERT_EQ(result, 1) << "Should have failed:" << error.c_str();
-}
-
 const std::string vendorManifestKernelFcm =
         "<manifest " + kMetaVersionStr + " type=\"device\">\n"
         "    <kernel version=\"3.18.999\" target-level=\"8\"/>\n"
@@ -828,7 +772,7 @@ TEST_F(VintfObjectTest, ProductCompatibilityMatrix) {
                 "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\"/>");
     expectFetch(kProductMatrix,
                 "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\">\n"
-                "    <hal format=\"hidl\" optional=\"true\">\n"
+                "    <hal format=\"hidl\">\n"
                 "        <name>android.hardware.foo</name>\n"
                 "        <version>1.0</version>\n"
                 "        <interface>\n"
@@ -1602,7 +1546,7 @@ class RegexInstanceDeprecateTest : public VintfObjectTestBase {
             }));
         expectFetchRepeatedly(kSystemVintfDir + "compatibility_matrix.1.xml"s,
             "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
-            "    <hal format=\"hidl\" optional=\"true\">\n"
+            "    <hal format=\"hidl\">\n"
             "        <name>android.hardware.minor</name>\n"
             "        <version>1.1</version>\n"
             "        <interface>\n"
@@ -1610,7 +1554,7 @@ class RegexInstanceDeprecateTest : public VintfObjectTestBase {
             "            <regex-instance>instance.*</regex-instance>\n"
             "        </interface>\n"
             "    </hal>\n"
-            "    <hal format=\"aidl\" optional=\"true\">\n"
+            "    <hal format=\"aidl\">\n"
             "        <name>android.hardware.minor</name>\n"
             "        <version>101</version>\n"
             "        <interface>\n"
@@ -1622,7 +1566,7 @@ class RegexInstanceDeprecateTest : public VintfObjectTestBase {
         );
         expectFetchRepeatedly(kSystemVintfDir + "compatibility_matrix.2.xml"s,
             "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"2\">\n"
-            "    <hal format=\"hidl\" optional=\"true\">\n"
+            "    <hal format=\"hidl\">\n"
             "        <name>android.hardware.minor</name>\n"
             "        <version>1.2</version>\n"
             "        <interface>\n"
@@ -1630,7 +1574,7 @@ class RegexInstanceDeprecateTest : public VintfObjectTestBase {
             "            <regex-instance>instance.*</regex-instance>\n"
             "        </interface>\n"
             "    </hal>\n"
-            "    <hal format=\"aidl\" optional=\"true\">\n"
+            "    <hal format=\"aidl\">\n"
             "        <name>android.hardware.minor</name>\n"
             "        <version>102</version>\n"
             "        <interface>\n"
@@ -1726,7 +1670,7 @@ TEST_F(RegexTest, CombineLevel1) {
     std::string xml = toXml(*matrix);
 
     EXPECT_IN(
-        "    <hal format=\"hidl\" optional=\"false\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.regex</name>\n"
         "        <version>1.0-2</version>\n"
         "        <version>2.0</version>\n"
@@ -1737,7 +1681,7 @@ TEST_F(RegexTest, CombineLevel1) {
         "    </hal>\n",
         xml);
     EXPECT_IN(
-        "    <hal format=\"hidl\" optional=\"false\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.regex</name>\n"
         "        <version>1.0-1</version>\n"
         "        <interface>\n"
@@ -1749,7 +1693,7 @@ TEST_F(RegexTest, CombineLevel1) {
         "    </hal>\n",
         xml);
     EXPECT_IN(
-        "    <hal format=\"hidl\" optional=\"true\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.regex</name>\n"
         "        <version>1.1-2</version>\n"
         "        <interface>\n"
@@ -1761,7 +1705,7 @@ TEST_F(RegexTest, CombineLevel1) {
         "    </hal>\n",
         xml);
     EXPECT_IN(
-        "    <hal format=\"hidl\" optional=\"true\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.regex</name>\n"
         "        <version>2.0</version>\n"
         "        <interface>\n"
@@ -1781,7 +1725,7 @@ TEST_F(RegexTest, CombineLevel2) {
     std::string xml = toXml(*matrix);
 
     EXPECT_IN(
-        "    <hal format=\"hidl\" optional=\"false\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.regex</name>\n"
         "        <version>1.1-2</version>\n"
         "        <version>2.0</version>\n"
@@ -1792,7 +1736,7 @@ TEST_F(RegexTest, CombineLevel2) {
         "    </hal>\n",
         xml);
     EXPECT_IN(
-        "    <hal format=\"hidl\" optional=\"false\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.regex</name>\n"
         "        <version>1.1-2</version>\n"
         "        <interface>\n"
@@ -1804,7 +1748,7 @@ TEST_F(RegexTest, CombineLevel2) {
         "    </hal>\n",
         xml);
     EXPECT_IN(
-        "    <hal format=\"hidl\" optional=\"true\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.regex</name>\n"
         "        <version>2.0</version>\n"
         "        <interface>\n"
@@ -2508,7 +2452,7 @@ std::vector<std::string> GetOemFcmMatrixLevels(const std::string& name) {
     return {
         // 1.xml
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
-        "    <hal format=\"hidl\" optional=\"true\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>vendor.foo." + name + "</name>\n"
         "        <version>1.0</version>\n"
         "        <interface>\n"
@@ -2519,7 +2463,7 @@ std::vector<std::string> GetOemFcmMatrixLevels(const std::string& name) {
         "</compatibility-matrix>\n",
         // 2.xml
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"2\">\n"
-        "    <hal format=\"hidl\" optional=\"true\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>vendor.foo." + name + "</name>\n"
         "        <version>2.0</version>\n"
         "        <interface>\n"
@@ -2602,7 +2546,7 @@ class CheckMatricesWithHalDefTestBase : public MultiMatrixTest {
         // clang-format off
         std::vector<std::string> matrices{
             "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
-            "    <hal format=\"hidl\" optional=\"false\">\n"
+            "    <hal format=\"hidl\">\n"
             "        <name>android.hardware.hidl</name>\n"
             "        <version>1.0</version>\n"
             "        <interface>\n"
@@ -2610,7 +2554,7 @@ class CheckMatricesWithHalDefTestBase : public MultiMatrixTest {
             "            <instance>default</instance>\n"
             "        </interface>\n"
             "    </hal>\n"
-            "    <hal format=\"aidl\" optional=\"false\">\n"
+            "    <hal format=\"aidl\">\n"
             "        <name>android.hardware.aidl</name>\n"
             "        <interface>\n"
             "            <name>IAidl</name>\n"
@@ -2787,7 +2731,7 @@ TEST_F(CheckMatrixHalsHasDefinitionTest, FailMissingBoth) {
 
 constexpr const char* systemMatrixHealthFormat = R"(
 <compatibility-matrix %s type="framework" level="%s">
-    <hal format="%s" optional="%s">
+    <hal format="%s">
         <name>android.hardware.health</name>
         <version>%s</version>
         <interface>
@@ -2855,19 +2799,19 @@ class VintfObjectHealthHalTest : public MultiMatrixTest,
         SetUpMockSystemMatrices({
             android::base::StringPrintf(
                 systemMatrixHealthFormat, kMetaVersionStr.c_str(), to_string(Level::P).c_str(),
-                to_string(HalFormat::HIDL).c_str(), "true", to_string(Version{2, 0}).c_str()),
+                to_string(HalFormat::HIDL).c_str(), to_string(Version{2, 0}).c_str()),
             android::base::StringPrintf(
                 systemMatrixHealthFormat, kMetaVersionStr.c_str(), to_string(Level::Q).c_str(),
-                to_string(HalFormat::HIDL).c_str(), "true", to_string(Version{2, 0}).c_str()),
+                to_string(HalFormat::HIDL).c_str(), to_string(Version{2, 0}).c_str()),
             android::base::StringPrintf(
                 systemMatrixHealthFormat, kMetaVersionStr.c_str(), to_string(Level::R).c_str(),
-                to_string(HalFormat::HIDL).c_str(), "true", to_string(Version{2, 1}).c_str()),
+                to_string(HalFormat::HIDL).c_str(), to_string(Version{2, 1}).c_str()),
             android::base::StringPrintf(
                 systemMatrixHealthFormat, kMetaVersionStr.c_str(), to_string(Level::S).c_str(),
-                to_string(HalFormat::HIDL).c_str(), "true", to_string(Version{2, 1}).c_str()),
-            android::base::StringPrintf(
-                systemMatrixHealthFormat, kMetaVersionStr.c_str(), to_string(Level::T).c_str(),
-                to_string(HalFormat::AIDL).c_str(), "false", to_string(1).c_str()),
+                to_string(HalFormat::HIDL).c_str(), to_string(Version{2, 1}).c_str()),
+            android::base::StringPrintf(systemMatrixHealthFormat, kMetaVersionStr.c_str(),
+                                        to_string(Level::T).c_str(),
+                                        to_string(HalFormat::AIDL).c_str(), to_string(1).c_str()),
         });
         switch (GetParam().getHalFormat()) {
             case HalFormat::HIDL:
@@ -2926,7 +2870,7 @@ constexpr const char* systemMatrixComposerFormat = R"(
 )";
 
 constexpr const char* systemMatrixComposerHalFragmentFormat = R"(
-    <hal format="%s" optional="%s">
+    <hal format="%s">
         <name>%s</name>
         <version>%s</version>
         <interface>
@@ -3011,19 +2955,19 @@ class VintfObjectComposerHalTest : public MultiMatrixTest,
         MultiMatrixTest::SetUp();
 
         const std::string requiresHidl2_1To2_2 = android::base::StringPrintf(
-            systemMatrixComposerHalFragmentFormat, to_string(HalFormat::HIDL).c_str(), "false",
+            systemMatrixComposerHalFragmentFormat, to_string(HalFormat::HIDL).c_str(),
             composerHidlHalName, to_string(VersionRange{2, 1, 2}).c_str());
         const std::string requiresHidl2_1To2_3 = android::base::StringPrintf(
-            systemMatrixComposerHalFragmentFormat, to_string(HalFormat::HIDL).c_str(), "false",
+            systemMatrixComposerHalFragmentFormat, to_string(HalFormat::HIDL).c_str(),
             composerHidlHalName, to_string(VersionRange{2, 1, 3}).c_str());
         const std::string requiresHidl2_1To2_4 = android::base::StringPrintf(
-            systemMatrixComposerHalFragmentFormat, to_string(HalFormat::HIDL).c_str(), "false",
+            systemMatrixComposerHalFragmentFormat, to_string(HalFormat::HIDL).c_str(),
             composerHidlHalName, to_string(VersionRange{2, 1, 4}).c_str());
         const std::string optionalHidl2_1To2_4 = android::base::StringPrintf(
-            systemMatrixComposerHalFragmentFormat, to_string(HalFormat::HIDL).c_str(), "true",
+            systemMatrixComposerHalFragmentFormat, to_string(HalFormat::HIDL).c_str(),
             composerHidlHalName, to_string(VersionRange{2, 1, 4}).c_str());
         const std::string optionalAidl1 = android::base::StringPrintf(
-            systemMatrixComposerHalFragmentFormat, to_string(HalFormat::AIDL).c_str(), "true",
+            systemMatrixComposerHalFragmentFormat, to_string(HalFormat::AIDL).c_str(),
             composerAidlHalName, "1");
         const std::string optionalHidl2_1To2_4OrAidl1 = optionalHidl2_1To2_4 + optionalAidl1;
 

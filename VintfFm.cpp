@@ -295,7 +295,7 @@ std::shared_ptr<const HalManifest> VintfFm::getManifestForLevel(const FsFactory&
 
 bool VintfFm::dumpMatrix(const HalManifest& frameworkManifest, const std::string& dir,
                          Level level) {
-    auto matrix = frameworkManifest.generateCompatibleMatrix(false /*optional*/);
+    auto matrix = frameworkManifest.generateCompatibleMatrix();
     std::string path = dir + "/" + to_string(level) + ".xml";
     std::string error;
     if (OK != mFs->write(path, toXml(matrix), &error)) {

@@ -42,7 +42,6 @@ struct MatrixHal {
     HalFormat format = HalFormat::HIDL;
     std::string name;
     std::vector<VersionRange> versionRanges;
-    bool optional = false;
     ExclusiveTo exclusiveTo = ExclusiveTo::EMPTY;
     bool updatableViaApex = false;
     std::map<std::string, HalInterface> interfaces;
@@ -74,12 +73,6 @@ struct MatrixHal {
         const std::function<bool(const std::vector<VersionRange>&, const std::string&,
                                  const std::string& instanceOrPattern, bool isRegex)>& func) const;
 
-    bool isCompatible(const std::set<FqInstance>& providedInstances,
-                      const std::set<Version>& providedVersions) const;
-    bool isCompatible(const VersionRange& vr, const std::set<FqInstance>& providedInstances,
-                      const std::set<Version>& providedVersions) const;
-
-    void setOptional(bool o);
     void insertVersionRanges(const std::vector<VersionRange>& other);
     // Return size of all interface/instance pairs.
     size_t instancesCount() const;
