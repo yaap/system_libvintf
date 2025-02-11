@@ -78,7 +78,6 @@ public:
         f.mName = name;
         f.mVersionRange = range;
         f.mFormat = XmlSchemaFormat::DTD;
-        f.mOptional = true;
         cm.addXmlFile(std::move(f));
     }
     void set(CompatibilityMatrix &cm, Sepolicy &&sepolicy) {
@@ -736,12 +735,12 @@ static bool insert(std::map<std::string, HalInterface>* map, HalInterface&& intf
 TEST_F(LibVintfTest, MatrixHalConverter) {
     MatrixHal mh{HalFormat::NATIVE, "android.hardware.camera",
             {{VersionRange(1,2,3), VersionRange(4,5,6)}},
-            false /* optional */, ExclusiveTo::EMPTY, false /* updatableViaApex */, {}};
+            ExclusiveTo::EMPTY, false /* updatableViaApex */, {}};
     EXPECT_TRUE(insert(&mh.interfaces, {"IBetterCamera", {"default", "great"}}));
     EXPECT_TRUE(insert(&mh.interfaces, {"ICamera", {"default"}}));
     std::string xml = toXml(mh);
     EXPECT_EQ(xml,
-        "<hal format=\"native\" optional=\"false\">\n"
+        "<hal format=\"native\">\n"
         "    <name>android.hardware.camera</name>\n"
         "    <version>1.2-3</version>\n"
         "    <version>4.5-6</version>\n"
@@ -848,11 +847,11 @@ TEST_F(LibVintfTest, CompatibilityMatrixConverter) {
     CompatibilityMatrix cm;
     EXPECT_TRUE(add(cm, MatrixHal{HalFormat::NATIVE, "android.hardware.camera",
             {{VersionRange(1,2,3), VersionRange(4,5,6)}},
-            false /* optional */, ExclusiveTo::EMPTY,  false /* updatableViaApex */,
+            ExclusiveTo::EMPTY,  false /* updatableViaApex */,
             testHalInterfaces()}));
     EXPECT_TRUE(add(cm, MatrixHal{HalFormat::NATIVE, "android.hardware.nfc",
             {{VersionRange(4,5,6), VersionRange(10,11,12)}},
-            true /* optional */, ExclusiveTo::EMPTY, false /* updatableViaApex */,
+            ExclusiveTo::EMPTY, false /* updatableViaApex */,
             testHalInterfaces()}));
     EXPECT_TRUE(add(cm, MatrixKernel{KernelVersion(3, 18, 22),
             {KernelConfig{"CONFIG_FOO", Tristate::YES},
@@ -865,7 +864,7 @@ TEST_F(LibVintfTest, CompatibilityMatrixConverter) {
     std::string xml = toXml(cm);
     EXPECT_EQ(xml,
             "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\">\n"
-            "    <hal format=\"native\" optional=\"false\">\n"
+            "    <hal format=\"native\">\n"
             "        <name>android.hardware.camera</name>\n"
             "        <version>1.2-3</version>\n"
             "        <version>4.5-6</version>\n"
@@ -874,7 +873,7 @@ TEST_F(LibVintfTest, CompatibilityMatrixConverter) {
             "            <instance>default</instance>\n"
             "        </interface>\n"
             "    </hal>\n"
-            "    <hal format=\"native\" optional=\"true\">\n"
+            "    <hal format=\"native\">\n"
             "        <name>android.hardware.nfc</name>\n"
             "        <version>4.5-6</version>\n"
             "        <version>10.11-12</version>\n"
@@ -922,14 +921,14 @@ TEST_F(LibVintfTest, DeviceCompatibilityMatrixCoverter) {
     CompatibilityMatrix cm;
     EXPECT_TRUE(add(cm, MatrixHal{HalFormat::NATIVE, "android.hidl.manager",
             {{VersionRange(1,0)}},
-            false /* optional */, ExclusiveTo::EMPTY, false /* updatableViaApex */,
+            ExclusiveTo::EMPTY, false /* updatableViaApex */,
             testHalInterfaces()}));
     set(cm, SchemaType::DEVICE);
     set(cm, VndkVersionRange{25,0,1,5}, {"libjpeg.so", "libbase.so"});
     std::string xml = toXml(cm);
     EXPECT_EQ(xml,
         "<compatibility-matrix " + kMetaVersionStr + " type=\"device\">\n"
-        "    <hal format=\"native\" optional=\"false\">\n"
+        "    <hal format=\"native\">\n"
         "        <name>android.hidl.manager</name>\n"
         "        <version>1.0</version>\n"
         "        <interface>\n"
@@ -965,7 +964,6 @@ TEST_F(LibVintfTest, CompatibilityMatrixDefaultOptionalTrue) {
     EXPECT_TRUE(fromXml(&cm, xml));
     auto hal = getAnyHal(cm, "android.foo.bar");
     ASSERT_NE(nullptr, hal);
-    EXPECT_TRUE(hal->optional) << "If optional is not specified, it should be true by default";
 }
 
 TEST_F(LibVintfTest, IsValid) {
@@ -1063,14 +1061,12 @@ TEST_F(LibVintfTest, CompatibilityMatrixGetHals) {
     EXPECT_TRUE(add(cm, MatrixHal{HalFormat::NATIVE,
                                   "android.hardware.camera",
                                   {{VersionRange(1, 2, 3), VersionRange(4, 5, 6)}},
-                                  false /* optional */,
                                   ExclusiveTo::EMPTY,
                                   false /* updatableViaApex */,
                                   testHalInterfaces()}));
     EXPECT_TRUE(add(cm, MatrixHal{HalFormat::NATIVE,
                                   "android.hardware.nfc",
                                   {{VersionRange(4, 5, 6), VersionRange(10, 11, 12)}},
-                                  true /* optional */,
                                   ExclusiveTo::EMPTY,
                                   false /* updatableViaApex */,
                                   testHalInterfaces()}));
@@ -1079,7 +1075,6 @@ TEST_F(LibVintfTest, CompatibilityMatrixGetHals) {
         HalFormat::NATIVE,
         "android.hardware.camera",
         {{VersionRange(1, 2, 3), VersionRange(4, 5, 6)}},
-        false /* optional */,
         ExclusiveTo::EMPTY,
         false /* updatableViaApex */,
         testHalInterfaces(),
@@ -1087,7 +1082,6 @@ TEST_F(LibVintfTest, CompatibilityMatrixGetHals) {
     MatrixHal expectedNfcHal = MatrixHal{HalFormat::NATIVE,
                                          "android.hardware.nfc",
                                          {{VersionRange(4, 5, 6), VersionRange(10, 11, 12)}},
-                                         true /* optional */,
                                          ExclusiveTo::EMPTY,
                                          false /* updatableViaApex */,
                                          testHalInterfaces()};
@@ -1246,228 +1240,6 @@ TEST_F(LibVintfTest, DisableAvb) {
     EXPECT_TRUE(ki.checkCompatibility(cm, &error, CheckFlags::DISABLE_AVB_CHECK)) << error;
 }
 
-// This is the test extracted from VINTF Object doc
-TEST_F(LibVintfTest, HalCompat) {
-    CompatibilityMatrix matrix;
-    std::string error;
-
-    std::string matrixXml =
-            "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\">\n"
-            "    <hal format=\"hidl\" optional=\"false\">\n"
-            "        <name>android.hardware.foo</name>\n"
-            "        <version>1.0</version>\n"
-            "        <version>3.1-2</version>\n"
-            "        <interface>\n"
-            "            <name>IFoo</name>\n"
-            "            <instance>default</instance>\n"
-            "            <instance>specific</instance>\n"
-            "        </interface>\n"
-            "    </hal>\n"
-            "    <hal format=\"hidl\" optional=\"false\">\n"
-            "        <name>android.hardware.foo</name>\n"
-            "        <version>2.0</version>\n"
-            "        <interface>\n"
-            "            <name>IBar</name>\n"
-            "            <instance>default</instance>\n"
-            "        </interface>\n"
-            "    </hal>\n"
-            "    <sepolicy>\n"
-            "        <kernel-sepolicy-version>30</kernel-sepolicy-version>\n"
-            "        <sepolicy-version>25.5</sepolicy-version>\n"
-            "    </sepolicy>\n"
-            "</compatibility-matrix>\n";
-    EXPECT_TRUE(fromXml(&matrix, matrixXml, &error)) << error;
-
-    {
-        std::string manifestXml =
-                "<manifest " + kMetaVersionStr + " type=\"device\">\n"
-                "    <hal format=\"hidl\">\n"
-                "        <name>android.hardware.foo</name>\n"
-                "        <transport>hwbinder</transport>\n"
-                "        <version>1.0</version>\n"
-                "        <interface>\n"
-                "            <name>IFoo</name>\n"
-                "            <instance>default</instance>\n"
-                "            <instance>specific</instance>\n"
-                "        </interface>\n"
-                "    </hal>\n"
-                "    <hal format=\"hidl\">\n"
-                "        <name>android.hardware.foo</name>\n"
-                "        <transport>hwbinder</transport>\n"
-                "        <version>2.0</version>\n"
-                "        <interface>\n"
-                "            <name>IBar</name>\n"
-                "            <instance>default</instance>\n"
-                "        </interface>\n"
-                "    </hal>\n"
-                "    <sepolicy>\n"
-                "        <version>25.5</version>\n"
-                "    </sepolicy>\n"
-                "</manifest>\n";
-
-        HalManifest manifest;
-        EXPECT_TRUE(fromXml(&manifest, manifestXml, &error)) << error;
-        EXPECT_TRUE(manifest.checkCompatibility(matrix, &error)) << error;
-    }
-
-    {
-        std::string manifestXml =
-                "<manifest " + kMetaVersionStr + " type=\"device\">\n"
-                "    <hal format=\"hidl\">\n"
-                "        <name>android.hardware.foo</name>\n"
-                "        <transport>hwbinder</transport>\n"
-                "        <version>1.0</version>\n"
-                "        <interface>\n"
-                "            <name>IFoo</name>\n"
-                "            <instance>default</instance>\n"
-                "            <instance>specific</instance>\n"
-                "        </interface>\n"
-                "    </hal>\n"
-                "    <sepolicy>\n"
-                "        <version>25.5</version>\n"
-                "    </sepolicy>\n"
-                "</manifest>\n";
-        HalManifest manifest;
-        EXPECT_TRUE(fromXml(&manifest, manifestXml, &error)) << error;
-        EXPECT_FALSE(manifest.checkCompatibility(matrix, &error))
-                << "should not be compatible because IBar is missing";
-    }
-
-    {
-        std::string manifestXml =
-                "<manifest " + kMetaVersionStr + " type=\"device\">\n"
-                "    <hal format=\"hidl\">\n"
-                "        <name>android.hardware.foo</name>\n"
-                "        <transport>hwbinder</transport>\n"
-                "        <version>1.0</version>\n"
-                "        <interface>\n"
-                "            <name>IFoo</name>\n"
-                "            <instance>default</instance>\n"
-                "        </interface>\n"
-                "    </hal>\n"
-                "    <hal format=\"hidl\">\n"
-                "        <name>android.hardware.foo</name>\n"
-                "        <transport>hwbinder</transport>\n"
-                "        <version>2.0</version>\n"
-                "        <interface>\n"
-                "            <name>IBar</name>\n"
-                "            <instance>default</instance>\n"
-                "        </interface>\n"
-                "    </hal>\n"
-                "    <sepolicy>\n"
-                "        <version>25.5</version>\n"
-                "    </sepolicy>\n"
-                "</manifest>\n";
-        HalManifest manifest;
-        EXPECT_TRUE(fromXml(&manifest, manifestXml, &error)) << error;
-        EXPECT_FALSE(manifest.checkCompatibility(matrix, &error))
-            << "should not be compatible because IFoo/specific is missing";
-    }
-
-    {
-        std::string manifestXml =
-                "<manifest " + kMetaVersionStr + " type=\"device\">\n"
-                "    <hal format=\"hidl\">\n"
-                "        <name>android.hardware.foo</name>\n"
-                "        <transport>hwbinder</transport>\n"
-                "        <version>3.3</version>\n"
-                "        <interface>\n"
-                "            <name>IFoo</name>\n"
-                "            <instance>default</instance>\n"
-                "            <instance>specific</instance>\n"
-                "        </interface>\n"
-                "    </hal>\n"
-                "    <hal format=\"hidl\">\n"
-                "        <name>android.hardware.foo</name>\n"
-                "        <transport>hwbinder</transport>\n"
-                "        <version>2.0</version>\n"
-                "        <interface>\n"
-                "            <name>IBar</name>\n"
-                "            <instance>default</instance>\n"
-                "        </interface>\n"
-                "    </hal>\n"
-                "    <sepolicy>\n"
-                "        <version>25.5</version>\n"
-                "    </sepolicy>\n"
-                "</manifest>\n";
-        HalManifest manifest;
-        EXPECT_TRUE(fromXml(&manifest, manifestXml, &error)) << error;
-        EXPECT_TRUE(manifest.checkCompatibility(matrix, &error)) << error;
-    }
-
-    {
-        std::string manifestXml =
-                "<manifest " + kMetaVersionStr + " type=\"device\">\n"
-                "    <hal format=\"hidl\">\n"
-                "        <name>android.hardware.foo</name>\n"
-                "        <transport>hwbinder</transport>\n"
-                "        <version>1.0</version>\n"
-                "        <interface>\n"
-                "            <name>IFoo</name>\n"
-                "            <instance>default</instance>\n"
-                "        </interface>\n"
-                "    </hal>\n"
-                "    <hal format=\"hidl\">\n"
-                "        <name>android.hardware.foo</name>\n"
-                "        <transport>hwbinder</transport>\n"
-                "        <version>3.2</version>\n"
-                "        <interface>\n"
-                "            <name>IFoo</name>\n"
-                "            <instance>specific</instance>\n"
-                "        </interface>\n"
-                "    </hal>\n"
-                "    <hal format=\"hidl\">\n"
-                "        <name>android.hardware.foo</name>\n"
-                "        <transport>hwbinder</transport>\n"
-                "        <version>2.0</version>\n"
-                "        <interface>\n"
-                "            <name>IBar</name>\n"
-                "            <instance>default</instance>\n"
-                "        </interface>\n"
-                "    </hal>\n"
-                "    <sepolicy>\n"
-                "        <version>25.5</version>\n"
-                "    </sepolicy>\n"
-                "</manifest>\n";
-        HalManifest manifest;
-        EXPECT_TRUE(fromXml(&manifest, manifestXml, &error)) << error;
-        EXPECT_FALSE(manifest.checkCompatibility(matrix, &error))
-                << "should not be compatible even though @1.0::IFoo/default "
-                << "and @3.2::IFoo/specific present";
-    }
-
-    {
-        std::string manifestXml =
-                "<manifest " + kMetaVersionStr + " type=\"device\">\n"
-                "    <hal format=\"hidl\">\n"
-                "        <name>android.hardware.foo</name>\n"
-                "        <transport>hwbinder</transport>\n"
-                "        <version>1.0</version>\n"
-                "        <interface>\n"
-                "            <name>IFoo</name>\n"
-                "            <instance>default</instance>\n"
-                "            <instance>specific</instance>\n"
-                "        </interface>\n"
-                "    </hal>\n"
-                "    <hal format=\"hidl\">\n"
-                "        <name>android.hardware.foo</name>\n"
-                "        <transport>hwbinder</transport>\n"
-                "        <version>2.0</version>\n"
-                "        <interface>\n"
-                "            <name>IBar</name>\n"
-                "            <instance>default</instance>\n"
-                "        </interface>\n"
-                "    </hal>\n"
-                "    <sepolicy>\n"
-                "        <version>25.5</version>\n"
-                "    </sepolicy>\n"
-                "</manifest>\n";
-        HalManifest manifest;
-        EXPECT_TRUE(fromXml(&manifest, manifestXml, &error)) << error;
-        EXPECT_TRUE(manifest.checkCompatibility(matrix, &error)) << error;
-    }
-}
-
 TEST_F(LibVintfTest, FullCompat) {
     std::string manifestXml =
         "<manifest " + kMetaVersionStr + " type=\"device\">\n"
@@ -1511,7 +1283,7 @@ TEST_F(LibVintfTest, FullCompat) {
 
     std::string matrixXml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\">\n"
-        "    <hal format=\"hidl\" optional=\"false\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.camera</name>\n"
         "        <version>2.0-5</version>\n"
         "        <version>3.4-16</version>\n"
@@ -1525,7 +1297,7 @@ TEST_F(LibVintfTest, FullCompat) {
         "            <instance>legacy/0</instance>\n"
         "        </interface>\n"
         "    </hal>\n"
-        "    <hal format=\"hidl\" optional=\"false\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.nfc</name>\n"
         "        <version>1.0</version>\n"
         "        <version>2.0</version>\n"
@@ -1534,7 +1306,7 @@ TEST_F(LibVintfTest, FullCompat) {
         "            <instance>nfc_nci</instance>\n"
         "        </interface>\n"
         "    </hal>\n"
-        "    <hal format=\"hidl\" optional=\"true\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <version>1.0</version>\n"
         "    </hal>\n"
@@ -1556,32 +1328,6 @@ TEST_F(LibVintfTest, FullCompat) {
     EXPECT_TRUE(fromXml(&matrix, matrixXml));
     EXPECT_TRUE(manifest.checkCompatibility(matrix, &error)) << error;
 
-    // some smaller test cases
-    matrixXml =
-        "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\">\n"
-        "    <hal format=\"hidl\" optional=\"false\">\n"
-        "        <name>android.hardware.camera</name>\n"
-        "        <version>3.4</version>\n"
-        "    </hal>\n"
-        "    <sepolicy>\n"
-        "        <kernel-sepolicy-version>30</kernel-sepolicy-version>\n"
-        "        <sepolicy-version>25.5</sepolicy-version>\n"
-        "    </sepolicy>\n"
-        "    <avb><vbmeta-version>2.1</vbmeta-version></avb>\n"
-        "</compatibility-matrix>\n";
-    matrix = {};
-    EXPECT_TRUE(fromXml(&matrix, matrixXml));
-    EXPECT_TRUE(manifest.checkCompatibility(matrix, &error)) << error;
-    MatrixHal *camera = getAnyHal(matrix, "android.hardware.camera");
-    EXPECT_NE(camera, nullptr);
-    camera->versionRanges[0] = {3, 5};
-    EXPECT_TRUE(manifest.checkCompatibility(matrix, &error)) << error;
-    camera->versionRanges[0] = {3, 6};
-    EXPECT_FALSE(manifest.checkCompatibility(matrix));
-
-    // reset it
-    matrix = {};
-    EXPECT_TRUE(fromXml(&matrix, matrixXml));
     set(matrix, Sepolicy{30, {{26, 0}}});
     EXPECT_FALSE(manifest.checkCompatibility(matrix));
     set(matrix, Sepolicy{30, {{25, 6}}});
@@ -1630,7 +1376,7 @@ class NativeHalCompatTest : public LibVintfTest,
    public:
     static std::vector<NativeHalCompatTestParam> createParams() {
         std::string matrixIntf = "<compatibility-matrix " + kMetaVersionStr + R"( type="device">
-                <hal format="native" optional="false">
+                <hal format="native">
                     <name>foo</name>
                     <version>1.0</version>
                     <interface>
@@ -1641,7 +1387,7 @@ class NativeHalCompatTest : public LibVintfTest,
             </compatibility-matrix>
         )";
         std::string matrixNoIntf = "<compatibility-matrix " + kMetaVersionStr + R"( type="device">
-                <hal format="native" optional="false">
+                <hal format="native">
                     <name>foo</name>
                     <version>1.0</version>
                     <interface>
@@ -1651,7 +1397,7 @@ class NativeHalCompatTest : public LibVintfTest,
             </compatibility-matrix>
         )";
         std::string matrixNoInst = "<compatibility-matrix " + kMetaVersionStr + R"( type="device">
-                <hal format="native" optional="false">
+                <hal format="native">
                     <name>foo</name>
                     <version>1.0</version>
                </hal>
@@ -1702,25 +1448,21 @@ class NativeHalCompatTest : public LibVintfTest,
 
         std::vector<NativeHalCompatTestParam> ret;
 
-        // If the matrix specifies interface name, the manifest must also do.
+        // If the matrix specifies interface name, the manifest can specify or
+        // not.
         ret.emplace_back(NativeHalCompatTestParam{matrixIntf, manifestFqnameIntf, true, ""});
         ret.emplace_back(NativeHalCompatTestParam{matrixIntf, manifestLegacyIntf, true, ""});
-        ret.emplace_back(NativeHalCompatTestParam{matrixIntf, manifestFqnameNoIntf, false,
-                                                  "required: @1.0::IFoo/default"});
-        ret.emplace_back(NativeHalCompatTestParam{matrixIntf, manifestLegacyNoIntf, false,
-                                                  "required: @1.0::IFoo/default"});
-        ret.emplace_back(NativeHalCompatTestParam{matrixIntf, manifestNoInst, false,
-                                                  "required: @1.0::IFoo/default"});
+        ret.emplace_back(NativeHalCompatTestParam{matrixIntf, manifestFqnameNoIntf, true, ""});
+        ret.emplace_back(NativeHalCompatTestParam{matrixIntf, manifestLegacyNoIntf, true, ""});
+        ret.emplace_back(NativeHalCompatTestParam{matrixIntf, manifestNoInst, true, ""});
 
-        // If the matrix does not specify an interface name, the manifest must not do that either.
-        ret.emplace_back(NativeHalCompatTestParam{matrixNoIntf, manifestFqnameIntf, false,
-                                                  "required: @1.0/default"});
-        ret.emplace_back(NativeHalCompatTestParam{matrixNoIntf, manifestLegacyIntf, false,
-                                                  "required: @1.0/default"});
+        // If the matrix does not specify an interface name, the manifest can
+        // specify it or not.
+        ret.emplace_back(NativeHalCompatTestParam{matrixNoIntf, manifestFqnameIntf, true, ""});
+        ret.emplace_back(NativeHalCompatTestParam{matrixNoIntf, manifestLegacyIntf, true, ""});
         ret.emplace_back(NativeHalCompatTestParam{matrixNoIntf, manifestFqnameNoIntf, true, ""});
         ret.emplace_back(NativeHalCompatTestParam{matrixNoIntf, manifestLegacyNoIntf, true, ""});
-        ret.emplace_back(NativeHalCompatTestParam{matrixNoIntf, manifestNoInst, false,
-                                                  "required: @1.0/default"});
+        ret.emplace_back(NativeHalCompatTestParam{matrixNoIntf, manifestNoInst, true, ""});
 
         // If the matrix does not specify interface name nor instances, the manifest may either
         // provide instances of that version, or just a version number with no instances.
@@ -1833,7 +1575,7 @@ TEST_F(LibVintfTest, CompatibilityMatrixConverterXmlFile) {
     std::string xml = toXml(cm, SerializeFlags::XMLFILES_ONLY);
     EXPECT_EQ(xml,
               "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\">\n"
-              "    <xmlfile format=\"dtd\" optional=\"true\">\n"
+              "    <xmlfile format=\"dtd\">\n"
               "        <name>media_profile</name>\n"
               "        <version>1.0</version>\n"
               "    </xmlfile>\n"
@@ -1841,21 +1583,6 @@ TEST_F(LibVintfTest, CompatibilityMatrixConverterXmlFile) {
     CompatibilityMatrix cm2;
     EXPECT_TRUE(fromXml(&cm2, xml));
     EXPECT_EQ(cm, cm2);
-}
-
-TEST_F(LibVintfTest, CompatibilityMatrixConverterXmlFile2) {
-    std::string error;
-    std::string xml =
-        "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\">\n"
-        "    <xmlfile format=\"dtd\" optional=\"false\">\n"
-        "        <name>media_profile</name>\n"
-        "        <version>1.0</version>\n"
-        "    </xmlfile>\n"
-        "</compatibility-matrix>\n";
-    CompatibilityMatrix cm;
-    EXPECT_FALSE(fromXml(&cm, xml, &error));
-    EXPECT_EQ("compatibility-matrix.xmlfile entry media_profile has to be optional for "
-              "compatibility matrix version 1.0", error);
 }
 
 TEST_F(LibVintfTest, ManifestXmlFilePathDevice) {
@@ -1916,7 +1643,7 @@ TEST_F(LibVintfTest, ManifestXmlFilePathMissing) {
 TEST_F(LibVintfTest, MatrixXmlFilePathFramework) {
     std::string matrixXml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\">"
-        "    <xmlfile format=\"dtd\" optional=\"true\">"
+        "    <xmlfile format=\"dtd\">"
         "        <name>media_profile</name>"
         "        <version>2.0-1</version>"
         "    </xmlfile>"
@@ -1930,7 +1657,7 @@ TEST_F(LibVintfTest, MatrixXmlFilePathFramework) {
 TEST_F(LibVintfTest, MatrixXmlFilePathDevice) {
     std::string matrixXml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"device\">"
-        "    <xmlfile format=\"xsd\" optional=\"true\">"
+        "    <xmlfile format=\"xsd\">"
         "        <name>media_profile</name>"
         "        <version>2.0-1</version>"
         "    </xmlfile>"
@@ -1944,7 +1671,7 @@ TEST_F(LibVintfTest, MatrixXmlFilePathDevice) {
 TEST_F(LibVintfTest, MatrixXmlFilePathOverride) {
     std::string matrixXml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\">"
-        "    <xmlfile format=\"xsd\" optional=\"true\">"
+        "    <xmlfile format=\"xsd\">"
         "        <name>media_profile</name>"
         "        <version>2.0-1</version>"
         "        <path>/system/etc/foo.xsd</path>"
@@ -1958,7 +1685,7 @@ TEST_F(LibVintfTest, MatrixXmlFilePathOverride) {
 TEST_F(LibVintfTest, MatrixXmlFilePathMissing) {
     std::string matrixXml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\">"
-        "    <xmlfile format=\"dtd\" optional=\"true\">"
+        "    <xmlfile format=\"dtd\">"
         "        <name>media_profile</name>"
         "        <version>2.1</version>"
         "    </xmlfile>"
@@ -2064,7 +1791,7 @@ TEST_F(LibVintfTest, NetutilsWrapperMatrix) {
 
     matrixXml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"device\">"
-        "    <hal format=\"native\" optional=\"false\">"
+        "    <hal format=\"native\">"
         "        <name>netutils-wrapper</name>"
         "        <version>1.0</version>"
         "    </hal>"
@@ -2076,7 +1803,7 @@ TEST_F(LibVintfTest, NetutilsWrapperMatrix) {
 
     matrixXml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"device\">"
-        "    <hal format=\"native\" optional=\"false\">"
+        "    <hal format=\"native\">"
         "        <name>netutils-wrapper</name>"
         "        <version>1.0-1</version>"
         "    </hal>"
@@ -2088,7 +1815,7 @@ TEST_F(LibVintfTest, NetutilsWrapperMatrix) {
 
     matrixXml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"device\">"
-        "    <hal format=\"native\" optional=\"false\">"
+        "    <hal format=\"native\">"
         "        <name>netutils-wrapper</name>"
         "        <version>1.1</version>"
         "    </hal>"
@@ -2100,7 +1827,7 @@ TEST_F(LibVintfTest, NetutilsWrapperMatrix) {
 
     matrixXml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"device\">"
-        "    <hal format=\"native\" optional=\"false\">"
+        "    <hal format=\"native\">"
         "        <name>netutils-wrapper</name>"
         "        <version>1.0</version>"
         "        <version>2.0</version>"
@@ -2582,7 +2309,7 @@ TEST_F(LibVintfTest, AddOptionalHal) {
 
     xml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"2\">\n"
-        "    <hal format=\"hidl\" optional=\"false\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <version>1.0-1</version>\n"
         "        <interface>\n"
@@ -2597,7 +2324,7 @@ TEST_F(LibVintfTest, AddOptionalHal) {
     xml = toXml(cm1, SerializeFlags::HALS_ONLY);
     EXPECT_EQ(xml,
               "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
-              "    <hal format=\"hidl\" optional=\"true\">\n"
+              "    <hal format=\"hidl\">\n"
               "        <name>android.hardware.foo</name>\n"
               "        <version>1.0-1</version>\n"
               "        <interface>\n"
@@ -2616,7 +2343,7 @@ TEST_F(LibVintfTest, AddOptionalHalMinorVersion) {
 
     xml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
-        "    <hal format=\"hidl\" optional=\"false\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <version>1.2-3</version>\n"
         "        <interface>\n"
@@ -2629,7 +2356,7 @@ TEST_F(LibVintfTest, AddOptionalHalMinorVersion) {
 
     xml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"2\">\n"
-        "    <hal format=\"hidl\" optional=\"false\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <version>1.0-4</version>\n"
         "        <interface>\n"
@@ -2644,7 +2371,7 @@ TEST_F(LibVintfTest, AddOptionalHalMinorVersion) {
     xml = toXml(cm1, SerializeFlags::HALS_ONLY);
     EXPECT_EQ(xml,
               "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
-              "    <hal format=\"hidl\" optional=\"false\">\n"
+              "    <hal format=\"hidl\">\n"
               "        <name>android.hardware.foo</name>\n"
               "        <version>1.0-4</version>\n"
               "        <interface>\n"
@@ -2663,7 +2390,7 @@ TEST_F(LibVintfTest, AddOptionalHalMajorVersion) {
 
     xml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
-        "    <hal format=\"hidl\" optional=\"false\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <version>1.2-3</version>\n"
         "        <interface>\n"
@@ -2676,7 +2403,7 @@ TEST_F(LibVintfTest, AddOptionalHalMajorVersion) {
 
     xml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"2\">\n"
-        "    <hal format=\"hidl\" optional=\"false\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <version>1.2-3</version>\n"
         "        <version>2.0-4</version>\n"
@@ -2692,7 +2419,7 @@ TEST_F(LibVintfTest, AddOptionalHalMajorVersion) {
     xml = toXml(cm1, SerializeFlags::HALS_ONLY);
     EXPECT_EQ(xml,
               "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
-              "    <hal format=\"hidl\" optional=\"false\">\n"
+              "    <hal format=\"hidl\">\n"
               "        <name>android.hardware.foo</name>\n"
               "        <version>1.2-3</version>\n"
               "        <version>2.0-4</version>\n"
@@ -2712,7 +2439,7 @@ TEST_F(LibVintfTest, AddOptionalHalMinorVersionDiffInstance) {
 
     xml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
-        "    <hal format=\"hidl\" optional=\"false\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <version>1.0-1</version>\n"
         "        <interface>\n"
@@ -2725,7 +2452,7 @@ TEST_F(LibVintfTest, AddOptionalHalMinorVersionDiffInstance) {
 
     xml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"2\">\n"
-        "    <hal format=\"hidl\" optional=\"false\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <version>1.1-2</version>\n"
         "        <interface>\n"
@@ -2740,7 +2467,7 @@ TEST_F(LibVintfTest, AddOptionalHalMinorVersionDiffInstance) {
     xml = toXml(cm1, SerializeFlags::HALS_ONLY);
     EXPECT_EQ(xml,
               "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
-              "    <hal format=\"hidl\" optional=\"false\">\n"
+              "    <hal format=\"hidl\">\n"
               "        <name>android.hardware.foo</name>\n"
               "        <version>1.0-1</version>\n"
               "        <interface>\n"
@@ -2748,7 +2475,7 @@ TEST_F(LibVintfTest, AddOptionalHalMinorVersionDiffInstance) {
               "            <instance>default</instance>\n"
               "        </interface>\n"
               "    </hal>\n"
-              "    <hal format=\"hidl\" optional=\"true\">\n"
+              "    <hal format=\"hidl\">\n"
               "        <name>android.hardware.foo</name>\n"
               "        <version>1.1-2</version>\n"
               "        <interface>\n"
@@ -2766,7 +2493,7 @@ TEST_F(LibVintfTest, AddRequiredHalOverlapInstance) {
 
     xml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
-        "    <hal format=\"hidl\" optional=\"false\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <version>1.0</version>\n"
         "        <interface>\n"
@@ -2784,7 +2511,7 @@ TEST_F(LibVintfTest, AddRequiredHalOverlapInstance) {
         CompatibilityMatrix cm2;
         xml =
             "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"2\">\n"
-            "    <hal format=\"hidl\" optional=\"false\">\n"
+            "    <hal format=\"hidl\">\n"
             "        <name>android.hardware.foo</name>\n"
             "        <version>2.0</version>\n"
             "        <interface>\n"
@@ -2800,7 +2527,7 @@ TEST_F(LibVintfTest, AddRequiredHalOverlapInstance) {
         xml = toXml(cm1, SerializeFlags::HALS_ONLY);
         EXPECT_EQ(xml,
                   "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
-                  "    <hal format=\"hidl\" optional=\"false\">\n"
+                  "    <hal format=\"hidl\">\n"
                   "        <name>android.hardware.foo</name>\n"
                   "        <version>1.0</version>\n"
                   "        <interface>\n"
@@ -2808,7 +2535,7 @@ TEST_F(LibVintfTest, AddRequiredHalOverlapInstance) {
                   "            <instance>custom</instance>\n"
                   "        </interface>\n"
                   "    </hal>\n"
-                  "    <hal format=\"hidl\" optional=\"false\">\n"
+                  "    <hal format=\"hidl\">\n"
                   "        <name>android.hardware.foo</name>\n"
                   "        <version>1.0</version>\n"
                   "        <version>2.0</version>\n"
@@ -2825,7 +2552,7 @@ TEST_F(LibVintfTest, AddRequiredHalOverlapInstance) {
         CompatibilityMatrix cm2;
         xml =
             "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"2\">\n"
-            "    <hal format=\"hidl\" optional=\"false\">\n"
+            "    <hal format=\"hidl\">\n"
             "        <name>android.hardware.foo</name>\n"
             "        <version>2.0</version>\n"
             "        <interface>\n"
@@ -2842,7 +2569,7 @@ TEST_F(LibVintfTest, AddRequiredHalOverlapInstance) {
         xml = toXml(cm1, SerializeFlags::HALS_ONLY);
         EXPECT_EQ(xml,
                   "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
-                  "    <hal format=\"hidl\" optional=\"false\">\n"
+                  "    <hal format=\"hidl\">\n"
                   "        <name>android.hardware.foo</name>\n"
                   "        <version>1.0</version>\n"
                   "        <interface>\n"
@@ -2850,7 +2577,7 @@ TEST_F(LibVintfTest, AddRequiredHalOverlapInstance) {
                   "            <instance>custom</instance>\n"
                   "        </interface>\n"
                   "    </hal>\n"
-                  "    <hal format=\"hidl\" optional=\"false\">\n"
+                  "    <hal format=\"hidl\">\n"
                   "        <name>android.hardware.foo</name>\n"
                   "        <version>1.0</version>\n"
                   "        <version>2.0</version>\n"
@@ -2859,7 +2586,7 @@ TEST_F(LibVintfTest, AddRequiredHalOverlapInstance) {
                   "            <instance>default</instance>\n"
                   "        </interface>\n"
                   "    </hal>\n"
-                  "    <hal format=\"hidl\" optional=\"true\">\n"
+                  "    <hal format=\"hidl\">\n"
                   "        <name>android.hardware.foo</name>\n"
                   "        <version>2.0</version>\n"
                   "        <interface>\n"
@@ -2879,7 +2606,7 @@ TEST_F(LibVintfTest, AddRequiredHalOverlapInstanceSplit) {
 
     xml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
-        "    <hal format=\"hidl\" optional=\"false\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <version>1.0</version>\n"
         "        <interface>\n"
@@ -2887,7 +2614,7 @@ TEST_F(LibVintfTest, AddRequiredHalOverlapInstanceSplit) {
         "            <instance>default</instance>\n"
         "        </interface>\n"
         "    </hal>\n"
-        "    <hal format=\"hidl\" optional=\"false\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <version>1.0</version>\n"
         "        <interface>\n"
@@ -2900,7 +2627,7 @@ TEST_F(LibVintfTest, AddRequiredHalOverlapInstanceSplit) {
 
     xml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"2\">\n"
-        "    <hal format=\"hidl\" optional=\"false\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <version>2.0</version>\n"
         "        <interface>\n"
@@ -2908,7 +2635,7 @@ TEST_F(LibVintfTest, AddRequiredHalOverlapInstanceSplit) {
         "            <instance>default</instance>\n"
         "        </interface>\n"
         "    </hal>\n"
-        "    <hal format=\"hidl\" optional=\"false\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <version>2.0</version>\n"
         "        <interface>\n"
@@ -2923,7 +2650,7 @@ TEST_F(LibVintfTest, AddRequiredHalOverlapInstanceSplit) {
     xml = toXml(cm1, SerializeFlags::HALS_ONLY);
     EXPECT_EQ(
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
-        "    <hal format=\"hidl\" optional=\"false\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <version>1.0</version>\n"
         "        <version>2.0</version>\n"
@@ -2932,7 +2659,7 @@ TEST_F(LibVintfTest, AddRequiredHalOverlapInstanceSplit) {
         "            <instance>default</instance>\n"
         "        </interface>\n"
         "    </hal>\n"
-        "    <hal format=\"hidl\" optional=\"false\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <version>1.0</version>\n"
         "        <interface>\n"
@@ -2940,7 +2667,7 @@ TEST_F(LibVintfTest, AddRequiredHalOverlapInstanceSplit) {
         "            <instance>custom</instance>\n"
         "        </interface>\n"
         "    </hal>\n"
-        "    <hal format=\"hidl\" optional=\"true\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <version>2.0</version>\n"
         "        <interface>\n"
@@ -2960,7 +2687,7 @@ TEST_F(LibVintfTest, AddOptionalHalUpdatableViaApex) {
 
     xml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
-        "    <hal format=\"aidl\" optional=\"false\">\n"
+        "    <hal format=\"aidl\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <interface>\n"
         "            <name>IFoo</name>\n"
@@ -2972,7 +2699,7 @@ TEST_F(LibVintfTest, AddOptionalHalUpdatableViaApex) {
 
     xml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"2\">\n"
-        "    <hal format=\"aidl\" optional=\"false\" updatable-via-apex=\"true\">\n"
+        "    <hal format=\"aidl\" updatable-via-apex=\"true\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <interface>\n"
         "            <name>IFoo</name>\n"
@@ -2986,7 +2713,7 @@ TEST_F(LibVintfTest, AddOptionalHalUpdatableViaApex) {
     xml = toXml(cm1, SerializeFlags::HALS_ONLY);
     EXPECT_EQ(xml,
               "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
-              "    <hal format=\"aidl\" optional=\"false\" updatable-via-apex=\"true\">\n"
+              "    <hal format=\"aidl\" updatable-via-apex=\"true\">\n"
               "        <name>android.hardware.foo</name>\n"
               "        <interface>\n"
               "            <name>IFoo</name>\n"
@@ -3004,7 +2731,7 @@ TEST_F(LibVintfTest, AddOptionalXmlFile) {
 
     xml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
-        "    <xmlfile format=\"xsd\" optional=\"true\">\n"
+        "    <xmlfile format=\"xsd\">\n"
         "        <name>foo</name>\n"
         "        <version>1.0-2</version>\n"
         "        <path>/foo/bar/baz.xsd</path>\n"
@@ -3014,7 +2741,7 @@ TEST_F(LibVintfTest, AddOptionalXmlFile) {
 
     xml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"2\">\n"
-        "    <xmlfile format=\"xsd\" optional=\"true\">\n"
+        "    <xmlfile format=\"xsd\">\n"
         "        <name>foo</name>\n"
         "        <version>1.1-3</version>\n"
         "        <path>/foo/bar/quux.xsd</path>\n"
@@ -3026,12 +2753,12 @@ TEST_F(LibVintfTest, AddOptionalXmlFile) {
     xml = toXml(cm1, SerializeFlags::XMLFILES_ONLY);
     EXPECT_EQ(xml,
               "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
-              "    <xmlfile format=\"xsd\" optional=\"true\">\n"
+              "    <xmlfile format=\"xsd\">\n"
               "        <name>foo</name>\n"
               "        <version>1.0-2</version>\n"
               "        <path>/foo/bar/baz.xsd</path>\n"
               "    </xmlfile>\n"
-              "    <xmlfile format=\"xsd\" optional=\"true\">\n"
+              "    <xmlfile format=\"xsd\">\n"
               "        <name>foo</name>\n"
               "        <version>1.1-3</version>\n"
               "        <path>/foo/bar/quux.xsd</path>\n"
@@ -4041,84 +3768,6 @@ TEST_F(LibVintfTest, MatrixDetailErrorMsg) {
         "    </hal>\n"
         "</manifest>\n";
     ASSERT_TRUE(fromXml(&manifest, xml, &error)) << error;
-
-    {
-        CompatibilityMatrix cm;
-        xml =
-            "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"7\">\n"
-            "    <hal format=\"hidl\" optional=\"false\">\n"
-            "        <name>android.hardware.foo</name>\n"
-            "        <version>1.2-3</version>\n"
-            "        <version>4.5</version>\n"
-            "        <interface>\n"
-            "            <name>IFoo</name>\n"
-            "            <instance>default</instance>\n"
-            "            <instance>slot1</instance>\n"
-            "        </interface>\n"
-            "        <interface>\n"
-            "            <name>IBar</name>\n"
-            "            <instance>default</instance>\n"
-            "        </interface>\n"
-            "    </hal>\n"
-            "</compatibility-matrix>\n";
-        EXPECT_TRUE(fromXml(&cm, xml, &error)) << error;
-        EXPECT_FALSE(manifest.checkCompatibility(cm, &error));
-        EXPECT_IN("Manifest level = 8", error);
-        EXPECT_IN("Matrix level = 7", error);
-        EXPECT_IN(
-            "android.hardware.foo:\n"
-            "    required: \n"
-            "        (@1.2-3::IBar/default AND @1.2-3::IFoo/default AND @1.2-3::IFoo/slot1) OR\n"
-            "        (@4.5::IBar/default AND @4.5::IFoo/default AND @4.5::IFoo/slot1)\n"
-            "    provided: @1.0::IFoo/default",
-            error);
-    }
-
-    {
-        CompatibilityMatrix cm;
-        xml =
-            "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\">\n"
-            "    <hal format=\"hidl\" optional=\"false\">\n"
-            "        <name>android.hardware.foo</name>\n"
-            "        <version>1.2-3</version>\n"
-            "        <interface>\n"
-            "            <name>IFoo</name>\n"
-            "            <instance>default</instance>\n"
-            "            <instance>slot1</instance>\n"
-            "        </interface>\n"
-            "    </hal>\n"
-            "</compatibility-matrix>\n";
-        EXPECT_TRUE(fromXml(&cm, xml, &error)) << error;
-        EXPECT_FALSE(manifest.checkCompatibility(cm, &error));
-        EXPECT_IN(
-            "android.hardware.foo:\n"
-            "    required: (@1.2-3::IFoo/default AND @1.2-3::IFoo/slot1)\n"
-            "    provided: @1.0::IFoo/default",
-            error);
-    }
-
-    // the most frequent use case.
-    {
-        CompatibilityMatrix cm;
-        xml =
-            "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\">\n"
-            "    <hal format=\"hidl\" optional=\"false\">\n"
-            "        <name>android.hardware.foo</name>\n"
-            "        <version>1.2-3</version>\n"
-            "        <interface>\n"
-            "            <name>IFoo</name>\n"
-            "            <instance>default</instance>\n"
-            "        </interface>\n"
-            "    </hal>\n"
-            "</compatibility-matrix>\n";
-        EXPECT_TRUE(fromXml(&cm, xml, &error)) << error;
-        EXPECT_FALSE(manifest.checkCompatibility(cm, &error));
-        EXPECT_IN(
-            "android.hardware.foo:\n"
-            "    required: @1.2-3::IFoo/default\n"
-            "    provided: @1.0::IFoo/default",
-            error);
-    }
 }
 
 TEST_F(LibVintfTest, DisabledHal) {
@@ -4162,7 +3811,7 @@ TEST_F(LibVintfTest, FqNameValid) {
     CompatibilityMatrix cm;
     xml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"device\">\n"
-        "    <hal format=\"hidl\" optional=\"false\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <version>1.0</version>\n"
         "        <interface>\n"
@@ -4170,7 +3819,7 @@ TEST_F(LibVintfTest, FqNameValid) {
         "            <instance>default</instance>\n"
         "        </interface>\n"
         "    </hal>\n"
-        "    <hal format=\"hidl\" optional=\"false\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <version>1.1</version>\n"
         "        <interface>\n"
@@ -4217,32 +3866,6 @@ TEST_F(LibVintfTest, FqNameValid) {
             "</manifest>\n";
         ASSERT_TRUE(fromXml(&manifest, xml, &error)) << error;
         EXPECT_TRUE(manifest.checkCompatibility(cm, &error)) << error;
-    }
-
-    {
-        HalManifest manifest;
-        xml =
-            "<manifest " + kMetaVersionStr + " type=\"framework\">\n"
-            "    <hal format=\"hidl\">\n"
-            "        <name>android.hardware.foo</name>\n"
-            "        <transport>hwbinder</transport>\n"
-            "        <version>1.0</version>\n"
-            "        <interface>\n"
-            "            <name>IFoo</name>\n"
-            "            <instance>default</instance>\n"
-            "            <instance>custom</instance>\n"
-            "        </interface>\n"
-            "    </hal>\n"
-            "</manifest>\n";
-        ASSERT_TRUE(fromXml(&manifest, xml, &error)) << error;
-        EXPECT_FALSE(manifest.checkCompatibility(cm, &error));
-        EXPECT_IN(
-            "android.hardware.foo:\n"
-            "    required: @1.1::IFoo/custom\n"
-            "    provided: \n"
-            "        @1.0::IFoo/custom\n"
-            "        @1.0::IFoo/default",
-            error);
     }
 
     {
@@ -4323,7 +3946,7 @@ TEST_F(LibVintfTest, RegexInstanceValid) {
 
     std::string xml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\">\n"
-        "    <hal format=\"hidl\" optional=\"false\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <version>1.0</version>\n"
         "        <interface>\n"
@@ -4342,7 +3965,7 @@ TEST_F(LibVintfTest, RegexInstanceInvalid) {
     std::string error;
     std::string xml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\">\n"
-        "    <hal format=\"hidl\" optional=\"false\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <version>1.0</version>\n"
         "        <interface>\n"
@@ -4368,7 +3991,7 @@ TEST_F(LibVintfTest, RegexInstanceCompat) {
 
     std::string matrixXml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\">\n"
-        "    <hal format=\"hidl\" optional=\"false\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <version>1.0</version>\n"
         "        <version>3.1-2</version>\n"
@@ -4429,9 +4052,6 @@ TEST_F(LibVintfTest, RegexInstanceCompat) {
 
         HalManifest manifest;
         EXPECT_TRUE(fromXml(&manifest, xml));
-        EXPECT_FALSE(manifest.checkCompatibility(matrix, &error))
-            << "Should not be compatible because no legacy/[0-9]+ is provided.";
-
         auto unused = checkUnusedHals(manifest, matrix);
         EXPECT_EQ((std::set<std::string>{"android.hardware.foo@1.0::IFoo/nonmatch/legacy/0",
                                          "android.hardware.foo@1.0::IFoo/legacy/0/nonmatch",
@@ -4783,7 +4403,7 @@ TEST_F(LibVintfTest, HalManifestWithMultipleFiles) {
 TEST_F(LibVintfTest, Aidl) {
     std::string xml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"device\">\n"
-        "    <hal format=\"aidl\" optional=\"false\">\n"
+        "    <hal format=\"aidl\">\n"
         "        <name>android.system.foo</name>\n"
         "        <interface>\n"
         "            <name>IFoo</name>\n"
@@ -4855,125 +4475,19 @@ TEST_F(LibVintfTest, Aidl) {
         EXPECT_EQ(manifest.getAidlInstances("android.system.does_not_exist", "IFoo"),
                   std::set<std::string>({}));
     }
-
-    {
-        HalManifest manifest;
-        std::string manifestXml =
-            "<manifest " + kMetaVersionStr + " type=\"framework\">\n"
-            "    <hal format=\"aidl\">\n"
-            "        <name>android.system.foo</name>\n"
-            "        <fqname>IFoo/incompat_instance</fqname>\n"
-            "        <fqname>IFoo/test0</fqname>\n"
-            "    </hal>\n"
-            "</manifest>\n";
-        EXPECT_TRUE(fromXml(&manifest, manifestXml, &error)) << error;
-        EXPECT_EQ(manifestXml, toXml(manifest, SerializeFlags::HALS_ONLY));
-        EXPECT_FALSE(manifest.checkCompatibility(matrix, &error))
-            << "Should not be compatible because default instance is missing";
-        EXPECT_IN("required: (IFoo/default (@1) AND IFoo/test.* (@1))", error);
-        EXPECT_IN("provided: \n"
-                  "        IFoo/incompat_instance (@1)\n"
-                  "        IFoo/test0 (@1)",
-                  error);
-    }
-
-    {
-        HalManifest manifest;
-        std::string manifestXml =
-            "<manifest " + kMetaVersionStr + " type=\"framework\">\n"
-            "    <hal format=\"aidl\">\n"
-            "        <name>android.system.foo</name>\n"
-            "        <interface>\n"
-            "            <name>IFoo</name>\n"
-            "            <instance>incompat_instance</instance>\n"
-            "            <instance>test0</instance>\n"
-            "        </interface>\n"
-            "    </hal>\n"
-            "</manifest>\n";
-        EXPECT_TRUE(fromXml(&manifest, manifestXml, &error)) << error;
-        EXPECT_EQ(
-            "<manifest " + kMetaVersionStr + " type=\"framework\">\n"
-            "    <hal format=\"aidl\">\n"
-            "        <name>android.system.foo</name>\n"
-            "        <fqname>IFoo/incompat_instance</fqname>\n"
-            "        <fqname>IFoo/test0</fqname>\n"
-            "    </hal>\n"
-            "</manifest>\n",
-            toXml(manifest, SerializeFlags::HALS_ONLY));
-        EXPECT_FALSE(manifest.checkCompatibility(matrix, &error))
-            << "Should not be compatible because default instance is missing";
-        EXPECT_IN("required: (IFoo/default (@1) AND IFoo/test.* (@1))", error);
-        EXPECT_IN("provided: \n"
-                  "        IFoo/incompat_instance (@1)\n"
-                  "        IFoo/test0 (@1)",
-                  error);
-    }
-
-    {
-        HalManifest manifest;
-        std::string manifestXml =
-            "<manifest " + kMetaVersionStr + " type=\"framework\">\n"
-            "    <hal format=\"aidl\">\n"
-            "        <name>android.system.foo</name>\n"
-            "        <fqname>IFoo/default</fqname>\n"
-            "        <fqname>IFoo/incompat_instance</fqname>\n"
-            "    </hal>\n"
-            "</manifest>\n";
-        EXPECT_TRUE(fromXml(&manifest, manifestXml, &error)) << error;
-        EXPECT_EQ(manifestXml, toXml(manifest, SerializeFlags::HALS_ONLY));
-        EXPECT_FALSE(manifest.checkCompatibility(matrix, &error))
-            << "Should not be compatible because test.* instance is missing";
-        EXPECT_IN("required: (IFoo/default (@1) AND IFoo/test.* (@1))", error);
-        EXPECT_IN("provided: \n"
-                  "        IFoo/default (@1)\n"
-                  "        IFoo/incompat_instance (@1)\n",
-                  error);
-    }
-
-    {
-        HalManifest manifest;
-        std::string manifestXml =
-            "<manifest " + kMetaVersionStr + " type=\"framework\">\n"
-            "    <hal format=\"aidl\">\n"
-            "        <name>android.system.foo</name>\n"
-            "        <interface>\n"
-            "            <name>IFoo</name>\n"
-            "            <instance>default</instance>\n"
-            "            <instance>incompat_instance</instance>\n"
-            "        </interface>\n"
-            "    </hal>\n"
-            "</manifest>\n";
-        EXPECT_TRUE(fromXml(&manifest, manifestXml, &error)) << error;
-        EXPECT_EQ(
-            "<manifest " + kMetaVersionStr + " type=\"framework\">\n"
-            "    <hal format=\"aidl\">\n"
-            "        <name>android.system.foo</name>\n"
-            "        <fqname>IFoo/default</fqname>\n"
-            "        <fqname>IFoo/incompat_instance</fqname>\n"
-            "    </hal>\n"
-            "</manifest>\n",
-            toXml(manifest, SerializeFlags::HALS_ONLY));
-        EXPECT_FALSE(manifest.checkCompatibility(matrix, &error))
-            << "Should not be compatible because test.* instance is missing";
-        EXPECT_IN("required: (IFoo/default (@1) AND IFoo/test.* (@1))", error);
-        EXPECT_IN("provided: \n"
-                  "        IFoo/default (@1)\n"
-                  "        IFoo/incompat_instance (@1)\n",
-                  error);
-    }
 }
 
 TEST_F(LibVintfTest, AidlAndHidlNamesMatrix) {
     std::string xml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"device\">\n"
-        "    <hal format=\"aidl\" optional=\"true\">\n"
+        "    <hal format=\"aidl\">\n"
         "        <name>android.system.foo</name>\n"
         "        <interface>\n"
         "            <name>IFoo</name>\n"
         "            <instance>default</instance>\n"
         "        </interface>\n"
         "    </hal>\n"
-        "    <hal format=\"hidl\" optional=\"true\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.system.foo</name>\n"
         "        <version>1.0</version>\n"
         "        <interface>\n"
@@ -5022,14 +4536,14 @@ TEST_F(LibVintfTest, AidlAndHidlCheckUnused) {
         "</manifest>\n";
     std::string matrixXml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"device\">\n"
-        "    <hal format=\"aidl\" optional=\"true\">\n"
+        "    <hal format=\"aidl\">\n"
         "        <name>android.system.foo</name>\n"
         "        <interface>\n"
         "            <name>IFoo</name>\n"
         "            <instance>default</instance>\n"
         "        </interface>\n"
         "    </hal>\n"
-        "    <hal format=\"hidl\" optional=\"true\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.system.foo</name>\n"
         "        <version>1.0</version>\n"
         "        <interface>\n"
@@ -5051,7 +4565,7 @@ TEST_F(LibVintfTest, AidlAndHidlCheckUnused) {
 TEST_F(LibVintfTest, AidlVersion) {
     std::string xml =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"device\">\n"
-        "    <hal format=\"aidl\" optional=\"false\">\n"
+        "    <hal format=\"aidl\">\n"
         "        <name>android.system.foo</name>\n"
         "        <version>4-100</version>\n"
         "        <interface>\n"
@@ -5146,175 +4660,6 @@ TEST_F(LibVintfTest, AidlVersion) {
                   std::set<std::string>({"default", "test0"}));
         EXPECT_EQ(manifest.getAidlInstances("android.system.does_not_exist", "IFoo"),
                   std::set<std::string>({}));
-    }
-
-    {
-        HalManifest manifest;
-        std::string manifestXml =
-            "<manifest " + kMetaVersionStr + " type=\"framework\">\n"
-            "    <hal format=\"aidl\">\n"
-            "        <name>android.system.foo</name>\n"
-            "        <version>5</version>\n"
-            "        <fqname>IFoo/incompat_instance</fqname>\n"
-            "        <fqname>IFoo/test0</fqname>\n"
-            "    </hal>\n"
-            "</manifest>\n";
-        EXPECT_TRUE(fromXml(&manifest, manifestXml, &error)) << error;
-        EXPECT_EQ(manifestXml, toXml(manifest, SerializeFlags::HALS_ONLY));
-        EXPECT_FALSE(manifest.checkCompatibility(matrix, &error))
-            << "Should not be compatible because default instance is missing";
-        EXPECT_IN("required: (IFoo/default (@4-100) AND IFoo/test.* (@4-100))", error);
-        EXPECT_IN("provided: \n"
-                  "        IFoo/incompat_instance (@5)\n"
-                  "        IFoo/test0 (@5)",
-                  error);
-    }
-
-    {
-        HalManifest manifest;
-        std::string manifestXml =
-            "<manifest " + kMetaVersionStr + " type=\"framework\">\n"
-            "    <hal format=\"aidl\">\n"
-            "        <name>android.system.foo</name>\n"
-            "        <version>5</version>\n"
-            "        <interface>\n"
-            "            <name>IFoo</name>\n"
-            "            <instance>incompat_instance</instance>\n"
-            "            <instance>test0</instance>\n"
-            "        </interface>\n"
-            "    </hal>\n"
-            "</manifest>\n";
-        EXPECT_TRUE(fromXml(&manifest, manifestXml, &error)) << error;
-        EXPECT_EQ(
-            "<manifest " + kMetaVersionStr + " type=\"framework\">\n"
-            "    <hal format=\"aidl\">\n"
-            "        <name>android.system.foo</name>\n"
-            "        <version>5</version>\n"
-            "        <fqname>IFoo/incompat_instance</fqname>\n"
-            "        <fqname>IFoo/test0</fqname>\n"
-            "    </hal>\n"
-            "</manifest>\n",
-            toXml(manifest, SerializeFlags::HALS_ONLY));
-        EXPECT_FALSE(manifest.checkCompatibility(matrix, &error))
-            << "Should not be compatible because default instance is missing";
-        EXPECT_IN("required: (IFoo/default (@4-100) AND IFoo/test.* (@4-100))", error);
-        EXPECT_IN("provided: \n"
-                  "        IFoo/incompat_instance (@5)\n"
-                  "        IFoo/test0 (@5)",
-                  error);
-    }
-
-    {
-        HalManifest manifest;
-        std::string manifestXml =
-            "<manifest " + kMetaVersionStr + " type=\"framework\">\n"
-            "    <hal format=\"aidl\">\n"
-            "        <name>android.system.foo</name>\n"
-            "        <version>5</version>\n"
-            "        <fqname>IFoo/default</fqname>\n"
-            "        <fqname>IFoo/incompat_instance</fqname>\n"
-            "    </hal>\n"
-            "</manifest>\n";
-        EXPECT_TRUE(fromXml(&manifest, manifestXml, &error)) << error;
-        EXPECT_EQ(manifestXml, toXml(manifest, SerializeFlags::HALS_ONLY));
-        EXPECT_FALSE(manifest.checkCompatibility(matrix, &error))
-            << "Should not be compatible because test.* instance is missing";
-        EXPECT_IN("required: (IFoo/default (@4-100) AND IFoo/test.* (@4-100))", error);
-        EXPECT_IN("provided: \n"
-                  "        IFoo/default (@5)\n"
-                  "        IFoo/incompat_instance (@5)",
-                  error);
-    }
-
-    {
-        HalManifest manifest;
-        std::string manifestXml =
-            "<manifest " + kMetaVersionStr + " type=\"framework\">\n"
-            "    <hal format=\"aidl\">\n"
-            "        <name>android.system.foo</name>\n"
-            "        <version>5</version>\n"
-            "        <interface>\n"
-            "            <name>IFoo</name>\n"
-            "            <instance>default</instance>\n"
-            "            <instance>incompat_instance</instance>\n"
-            "        </interface>\n"
-            "    </hal>\n"
-            "</manifest>\n";
-        EXPECT_TRUE(fromXml(&manifest, manifestXml, &error)) << error;
-        EXPECT_EQ(
-            "<manifest " + kMetaVersionStr + " type=\"framework\">\n"
-            "    <hal format=\"aidl\">\n"
-            "        <name>android.system.foo</name>\n"
-            "        <version>5</version>\n"
-            "        <fqname>IFoo/default</fqname>\n"
-            "        <fqname>IFoo/incompat_instance</fqname>\n"
-            "    </hal>\n"
-            "</manifest>\n",
-            toXml(manifest, SerializeFlags::HALS_ONLY));
-        EXPECT_FALSE(manifest.checkCompatibility(matrix, &error))
-            << "Should not be compatible because test.* instance is missing";
-        EXPECT_IN("required: (IFoo/default (@4-100) AND IFoo/test.* (@4-100))", error);
-        EXPECT_IN("provided: \n"
-                  "        IFoo/default (@5)\n"
-                  "        IFoo/incompat_instance (@5)",
-                  error);
-    }
-
-    {
-        HalManifest manifest;
-        std::string manifestXml =
-            "<manifest " + kMetaVersionStr + " type=\"framework\">\n"
-            "    <hal format=\"aidl\">\n"
-            "        <name>android.system.foo</name>\n"
-            "        <version>3</version>\n"
-            "        <fqname>IFoo/default</fqname>\n"
-            "        <fqname>IFoo/test0</fqname>\n"
-            "    </hal>\n"
-            "</manifest>\n";
-        EXPECT_TRUE(fromXml(&manifest, manifestXml, &error)) << error;
-        EXPECT_EQ(manifestXml, toXml(manifest, SerializeFlags::HALS_ONLY));
-        EXPECT_FALSE(manifest.checkCompatibility(matrix, &error))
-            << "Should not be compatible because version 3 cannot satisfy version 4-100";
-        EXPECT_IN("required: (IFoo/default (@4-100) AND IFoo/test.* (@4-100))", error);
-        EXPECT_IN("provided: \n"
-                  "        IFoo/default (@3)\n"
-                  "        IFoo/test0 (@3)",
-                  error);
-
-    }
-
-    {
-        HalManifest manifest;
-        std::string manifestXml =
-            "<manifest " + kMetaVersionStr + " type=\"framework\">\n"
-            "    <hal format=\"aidl\">\n"
-            "        <name>android.system.foo</name>\n"
-            "        <version>3</version>\n"
-            "        <interface>\n"
-            "            <name>IFoo</name>\n"
-            "            <instance>default</instance>\n"
-            "            <instance>test0</instance>\n"
-            "        </interface>\n"
-            "    </hal>\n"
-            "</manifest>\n";
-        EXPECT_TRUE(fromXml(&manifest, manifestXml, &error)) << error;
-        EXPECT_EQ(
-            "<manifest " + kMetaVersionStr + " type=\"framework\">\n"
-            "    <hal format=\"aidl\">\n"
-            "        <name>android.system.foo</name>\n"
-            "        <version>3</version>\n"
-            "        <fqname>IFoo/default</fqname>\n"
-            "        <fqname>IFoo/test0</fqname>\n"
-            "    </hal>\n"
-            "</manifest>\n",
-            toXml(manifest, SerializeFlags::HALS_ONLY));
-        EXPECT_FALSE(manifest.checkCompatibility(matrix, &error))
-            << "Should not be compatible because version 3 cannot satisfy version 4-100";
-        EXPECT_IN("required: (IFoo/default (@4-100) AND IFoo/test.* (@4-100))", error);
-        EXPECT_IN("provided: \n"
-                  "        IFoo/default (@3)\n"
-                  "        IFoo/test0 (@3)",
-                  error);
     }
 }
 
@@ -5717,17 +5062,12 @@ TEST_F(LibVintfTest, UnknownAccessEntryInManifestIsEmpty) {
 }
 
 TEST_F(LibVintfTest, AccessEntryInMatrix) {
-    MatrixHal mh{HalFormat::AIDL,
-                 "android.hardware.foo",
-                 {{SIZE_MAX, 1}},
-                 false /* optional */,
-                 ExclusiveTo::VM,
-                 false /* updatableViaApex */,
-                 {}};
+    MatrixHal mh{HalFormat::AIDL, "android.hardware.foo",       {{SIZE_MAX, 1}},
+                 ExclusiveTo::VM, false /* updatableViaApex */, {}};
     EXPECT_TRUE(insert(&mh.interfaces, {"IFoo", {"default"}}));
     std::string xml = toXml(mh);
     EXPECT_EQ(xml,
-              "<hal format=\"aidl\" optional=\"false\" exclusive-to=\"virtual-machine\">\n"
+              "<hal format=\"aidl\" exclusive-to=\"virtual-machine\">\n"
               "    <name>android.hardware.foo</name>\n"
               "    <interface>\n"
               "        <name>IFoo</name>\n"
@@ -5740,17 +5080,12 @@ TEST_F(LibVintfTest, AccessEntryInMatrix) {
 }
 
 TEST_F(LibVintfTest, NoAccessEntryInMatrix) {
-    MatrixHal mh{HalFormat::AIDL,
-                 "android.hardware.foo",
-                 {{SIZE_MAX, 1}},
-                 false /* optional */,
-                 ExclusiveTo::EMPTY,
-                 false /* updatableViaApex */,
-                 {}};
+    MatrixHal mh{HalFormat::AIDL,    "android.hardware.foo",       {{SIZE_MAX, 1}},
+                 ExclusiveTo::EMPTY, false /* updatableViaApex */, {}};
     EXPECT_TRUE(insert(&mh.interfaces, {"IFoo", {"default"}}));
     std::string xml = toXml(mh);
     EXPECT_EQ(xml,
-              "<hal format=\"aidl\" optional=\"false\">\n"
+              "<hal format=\"aidl\">\n"
               "    <name>android.hardware.foo</name>\n"
               "    <interface>\n"
               "        <name>IFoo</name>\n"
@@ -5813,7 +5148,7 @@ TEST_F(LibVintfTest, AccessIncompatibleNoAccess) {
 
     xml = "<compatibility-matrix " + kMetaVersionStr +
           " type=\"framework\">\n"
-          "    <hal format=\"aidl\" optional=\"false\" exclusive-to=\"virtual-machine\">\n"
+          "    <hal format=\"aidl\" exclusive-to=\"virtual-machine\">\n"
           "        <name>android.hardware.foo</name>\n"
           "        <interface>\n"
           "            <name>IFoo</name>\n"
@@ -6683,7 +6018,7 @@ TEST_F(FrameworkCompatibilityMatrixCombineTest, AidlAndHidlNames) {
     std::string head2{"<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"2\">\n"};
     std::string tail{"</compatibility-matrix>\n"};
     std::string aidl =
-        "    <hal format=\"aidl\" optional=\"false\">\n"
+        "    <hal format=\"aidl\">\n"
         "        <name>android.system.foo</name>\n"
         "        <interface>\n"
         "            <name>IFoo</name>\n"
@@ -6691,7 +6026,7 @@ TEST_F(FrameworkCompatibilityMatrixCombineTest, AidlAndHidlNames) {
         "        </interface>\n"
         "    </hal>\n";
     std::string hidl =
-        "    <hal format=\"hidl\" optional=\"false\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.system.foo</name>\n"
         "        <version>1.0</version>\n"
         "        <interface>\n"
@@ -6699,8 +6034,6 @@ TEST_F(FrameworkCompatibilityMatrixCombineTest, AidlAndHidlNames) {
         "            <instance>default</instance>\n"
         "        </interface>\n"
         "    </hal>\n";
-    std::string aidlOptional = std::string(aidl).replace(hidl.find("false"), 5, "true");
-    std::string hidlOptional = std::string(hidl).replace(hidl.find("false"), 5, "true");
     std::string error;
     {
         ASSERT_TRUE(fromXml(&matrices[0], head1 + aidl + tail, &error))
@@ -6726,7 +6059,7 @@ TEST_F(FrameworkCompatibilityMatrixCombineTest, AidlAndHidlNames) {
 
         auto combinedXml = toXml(*combined);
         EXPECT_IN(aidl, combinedXml);
-        EXPECT_IN(hidlOptional, combinedXml);
+        EXPECT_IN(hidl, combinedXml);
     }
     {
         ASSERT_TRUE(fromXml(&matrices[0], head2 + aidl + tail, &error))
@@ -6738,8 +6071,8 @@ TEST_F(FrameworkCompatibilityMatrixCombineTest, AidlAndHidlNames) {
         ASSERT_NE(nullptr, combined) << error;
 
         auto combinedXml = toXml(*combined);
-        EXPECT_IN(aidlOptional, combinedXml);
         EXPECT_IN(hidl, combinedXml);
+        EXPECT_IN(aidl, combinedXml);
     }
 }
 
@@ -6765,7 +6098,7 @@ TEST_P(FcmCombineKernelTest, OlderKernel) {
 
     constexpr auto fmt = R"(
         <compatibility-matrix %s type="framework" level="%s">
-            <hal format="hidl" optional="false">
+            <hal format="hidl">
                 <name>android.system.foo</name>
                 <version>%zu.0</version>
                 <interface>
@@ -6851,7 +6184,7 @@ TEST_F(DeviceCompatibilityMatrixCombineTest, Success) {
     std::string head{"<compatibility-matrix " + kMetaVersionStr + " type=\"device\">\n"};
     std::string tail{"</compatibility-matrix>\n"};
     std::string halFoo{
-        "    <hal format=\"hidl\" optional=\"false\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <version>1.0</version>\n"
         "        <interface>\n"
@@ -6860,7 +6193,7 @@ TEST_F(DeviceCompatibilityMatrixCombineTest, Success) {
         "        </interface>\n"
         "    </hal>\n"};
     std::string halBar{
-        "    <hal format=\"hidl\" optional=\"false\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.bar</name>\n"
         "        <version>1.0</version>\n"
         "        <interface>\n"
@@ -6906,7 +6239,7 @@ TEST_F(DeviceCompatibilityMatrixCombineTest, AidlAndHidlNames) {
     std::string head{"<compatibility-matrix " + kMetaVersionStr + " type=\"device\">\n"};
     std::string tail{"</compatibility-matrix>\n"};
     std::string aidl =
-        "    <hal format=\"aidl\" optional=\"true\">\n"
+        "    <hal format=\"aidl\">\n"
         "        <name>android.system.foo</name>\n"
         "        <interface>\n"
         "            <name>IFoo</name>\n"
@@ -6914,7 +6247,7 @@ TEST_F(DeviceCompatibilityMatrixCombineTest, AidlAndHidlNames) {
         "        </interface>\n"
         "    </hal>\n";
     std::string hidl =
-        "    <hal format=\"hidl\" optional=\"true\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.system.foo</name>\n"
         "        <version>1.0</version>\n"
         "        <interface>\n"

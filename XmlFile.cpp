@@ -21,8 +21,7 @@ namespace vintf {
 
 bool MatrixXmlFile::operator==(const MatrixXmlFile& other) const {
     return name() == other.name() && overriddenPath() == other.overriddenPath() &&
-           optional() == other.optional() && format() == other.format() &&
-           versionRange() == other.versionRange();
+           format() == other.format() && versionRange() == other.versionRange();
 }
 
 bool ManifestXmlFile::operator==(const ManifestXmlFile& other) const {

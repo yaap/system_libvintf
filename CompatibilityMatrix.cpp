@@ -236,7 +236,6 @@ bool CompatibilityMatrix::addAllHalsAsOptional(CompatibilityMatrix* other, std::
         }
 
         if (halToAdd.instancesCount() > 0) {
-            halToAdd.setOptional(true);
             if (!add(std::move(halToAdd))) {
                 if (error) {
                     *error = "Cannot add HAL " + name + " for unknown reason.";
@@ -256,7 +255,6 @@ bool CompatibilityMatrix::addAllXmlFilesAsOptional(CompatibilityMatrix* other, s
         const std::string& name = pair.first;
         MatrixXmlFile& xmlFileToAdd = pair.second;
 
-        xmlFileToAdd.mOptional = true;
         if (!addXmlFile(std::move(xmlFileToAdd))) {
             if (error) {
                 *error = "Cannot add XML File " + name + " for unknown reason.";

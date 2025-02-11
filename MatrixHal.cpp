@@ -59,9 +59,7 @@ bool MatrixHal::operator==(const MatrixHal &other) const {
         return false;
     if (versionRanges != other.versionRanges)
         return false;
-    if (interfaces != other.interfaces)
-        return false;
-    // do not compare optional
+    if (interfaces != other.interfaces) return false;
     return true;
 }
 
@@ -90,7 +88,7 @@ bool MatrixHal::forEachInstance(const VersionRange& vr,
                 FqInstance fqInstance;
                 if (fqInstance.setTo(getName(), vr.majorVer, vr.minMinor, interface, instance)) {
                     if (!func(MatrixInstance(format, exclusiveTo, std::move(fqInstance),
-                                             VersionRange(vr), optional, isRegex))) {
+                                             VersionRange(vr), isRegex))) {
                         return false;
                     }
                 }
@@ -116,47 +114,6 @@ bool MatrixHal::forEachInstance(
         }
     }
     return true;
-}
-
-bool MatrixHal::isCompatible(const std::set<FqInstance>& providedInstances,
-                             const std::set<Version>& providedVersions) const {
-    // <version>'s are related by OR.
-    return std::any_of(versionRanges.begin(), versionRanges.end(), [&](const VersionRange& vr) {
-        return isCompatible(vr, providedInstances, providedVersions);
-    });
-}
-
-bool MatrixHal::isCompatible(const VersionRange& vr, const std::set<FqInstance>& providedInstances,
-                             const std::set<Version>& providedVersions) const {
-    bool hasAnyInstance = false;
-    bool versionUnsatisfied = false;
-
-    // Look at each interface/instance, and ensure that they are in providedInstances.
-    forEachInstance(vr, [&](const MatrixInstance& matrixInstance) {
-        hasAnyInstance = true;
-
-        versionUnsatisfied |=
-            !std::any_of(providedInstances.begin(), providedInstances.end(),
-                         [&](const FqInstance& providedInstance) {
-                             return matrixInstance.isSatisfiedBy(providedInstance);
-                         });
-
-        return !versionUnsatisfied;  // if any interface/instance is unsatisfied, break
-    });
-
-    if (hasAnyInstance) {
-        return !versionUnsatisfied;
-    }
-
-    // In some cases (e.g. tests and native HALs), compatibility matrix doesn't specify
-    // any instances. Check versions only.
-    return std::any_of(
-        providedVersions.begin(), providedVersions.end(),
-        [&](const auto& providedVersion) { return vr.supportedBy(providedVersion); });
-}
-
-void MatrixHal::setOptional(bool o) {
-    this->optional = o;
 }
 
 void MatrixHal::insertVersionRanges(const std::vector<VersionRange>& other) {

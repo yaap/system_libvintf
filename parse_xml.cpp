@@ -644,7 +644,6 @@ struct MatrixHalConverter : public XmlNodeConverter<MatrixHal> {
     void mutateNode(const MatrixHal& object, NodeType* root,
                     const MutateNodeParam& param) const override {
         appendAttr(root, "format", object.format);
-        appendAttr(root, "optional", object.optional);
         // Only include if it is not the default empty value
         if (object.exclusiveTo != ExclusiveTo::EMPTY) {
             appendAttr(root, "exclusive-to", object.exclusiveTo);
@@ -671,8 +670,6 @@ struct MatrixHalConverter : public XmlNodeConverter<MatrixHal> {
                      const BuildObjectParam& param) const override {
         std::vector<HalInterface> interfaces;
         if (!parseOptionalAttr(root, "format", HalFormat::HIDL, &object->format, param) ||
-            !parseOptionalAttr(root, "optional", true /* defaultValue */, &object->optional,
-                               param) ||
             !parseOptionalAttr(root, "exclusive-to", ExclusiveTo::EMPTY, &object->exclusiveTo,
                                param) ||
             !parseOptionalAttr(root, "updatable-via-apex", false /* defaultValue */,
@@ -1441,7 +1438,6 @@ struct MatrixXmlFileConverter : public XmlNodeConverter<MatrixXmlFile> {
                     const MutateNodeParam& param) const override {
         appendTextElement(root, "name", object.name(), param.d);
         appendAttr(root, "format", object.format());
-        appendAttr(root, "optional", object.optional());
         appendChild(root, VersionRangeConverter{}(object.versionRange(), param));
         if (!object.overriddenPath().empty()) {
             appendTextElement(root, "path", object.overriddenPath(), param.d);
@@ -1451,7 +1447,6 @@ struct MatrixXmlFileConverter : public XmlNodeConverter<MatrixXmlFile> {
                      const BuildObjectParam& param) const override {
         if (!parseTextElement(root, "name", &object->mName, param.error) ||
             !parseAttr(root, "format", &object->mFormat, param.error) ||
-            !parseOptionalAttr(root, "optional", false, &object->mOptional, param) ||
             !parseChild(root, VersionRangeConverter{}, &object->mVersionRange, param) ||
             !parseOptionalTextElement(root, "path", {}, &object->mOverriddenPath, param.error)) {
             return false;
@@ -1595,11 +1590,6 @@ struct CompatibilityMatrixConverter : public XmlNodeConverter<CompatibilityMatri
             return false;
         }
         for (auto&& xmlFile : xmlFiles) {
-            if (!xmlFile.optional()) {
-                *param.error = "compatibility-matrix.xmlfile entry " + xmlFile.name() +
-                               " has to be optional for compatibility matrix version 1.0";
-                return false;
-            }
             std::string description{xmlFile.name()};
             if (!object->addXmlFile(std::move(xmlFile))) {
                 *param.error = "Duplicated compatibility-matrix.xmlfile entry " + description;

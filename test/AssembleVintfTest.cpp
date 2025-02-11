@@ -181,7 +181,7 @@ TEST_F(AssembleVintfTest, FrameworkMatrix) {
 
     std::string xml1 =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
-        "    <hal format=\"hidl\" optional=\"true\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <version>1.0</version>\n"
         "        <interface>\n"
@@ -193,7 +193,7 @@ TEST_F(AssembleVintfTest, FrameworkMatrix) {
 
     std::string xml2 =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"2\">\n"
-        "    <hal format=\"hidl\" optional=\"true\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <version>1.0-1</version>\n"
         "        <interface>\n"
@@ -205,7 +205,7 @@ TEST_F(AssembleVintfTest, FrameworkMatrix) {
 
     std::string xml3 =
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"3\">\n"
-        "    <hal format=\"hidl\" optional=\"false\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <version>2.0</version>\n"
         "        <interface>\n"
@@ -255,7 +255,7 @@ TEST_F(AssembleVintfTest, FrameworkMatrix) {
     EXPECT_TRUE(getInstance()->assemble());
     EXPECT_IN(
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"1\">\n"
-        "    <hal format=\"hidl\" optional=\"true\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <version>1.0-1</version>\n"
         "        <version>2.0</version>\n"
@@ -273,7 +273,7 @@ TEST_F(AssembleVintfTest, FrameworkMatrix) {
     EXPECT_TRUE(getInstance()->assemble());
     EXPECT_IN(
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"2\">\n"
-        "    <hal format=\"hidl\" optional=\"true\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <version>1.0-1</version>\n"
         "        <version>2.0</version>\n"
@@ -291,7 +291,7 @@ TEST_F(AssembleVintfTest, FrameworkMatrix) {
     EXPECT_TRUE(getInstance()->assemble());
     EXPECT_IN(
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\" level=\"3\">\n"
-        "    <hal format=\"hidl\" optional=\"false\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>android.hardware.foo</name>\n"
         "        <version>2.0</version>\n"
         "        <interface>\n"
@@ -428,7 +428,7 @@ TEST_F(AssembleVintfTest, DeviceFrameworkMatrixOptional) {
 
     addInput("compatibility_matrix.empty.xml",
              "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\">\n"
-             "    <hal format=\"hidl\" optional=\"true\">\n"
+             "    <hal format=\"hidl\">\n"
              "        <name>vendor.foo.bar</name>\n"
              "        <version>1.0</version>\n"
              "        <interface>\n"
@@ -441,7 +441,7 @@ TEST_F(AssembleVintfTest, DeviceFrameworkMatrixOptional) {
     EXPECT_TRUE(getInstance()->assemble());
     EXPECT_IN(
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\">\n"
-        "    <hal format=\"hidl\" optional=\"true\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>vendor.foo.bar</name>\n"
         "        <version>1.0</version>\n"
         "        <interface>\n"
@@ -462,29 +462,6 @@ TEST_F(AssembleVintfTest, DeviceFrameworkMatrixOptional) {
         getOutput());
 }
 
-TEST_F(AssembleVintfTest, DeviceFrameworkMatrixRequired) {
-    setFakeEnvs({{"POLICYVERS", "30"},
-                 {"PLATFORM_SEPOLICY_VERSION", "202404"},
-                 {"PLATFORM_SEPOLICY_COMPAT_VERSIONS", "26.0 27.0"},
-                 {"FRAMEWORK_VBMETA_VERSION", "1.0"},
-                 {"PRODUCT_ENFORCE_VINTF_MANIFEST", "true"}});
-    getInstance()->setCheckInputStream("check.xml", makeStream(gEmptyOutManifest));
-
-    addInput("compatibility_matrix.empty.xml",
-             "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\">\n"
-             "    <hal format=\"hidl\" optional=\"false\">\n"
-             "        <name>vendor.foo.bar</name>\n"
-             "        <version>1.0</version>\n"
-             "        <interface>\n"
-             "            <name>IFoo</name>\n"
-             "            <instance>default</instance>\n"
-             "        </interface>\n"
-             "    </hal>\n"
-             "</compatibility-matrix>");
-
-    EXPECT_FALSE(getInstance()->assemble());
-}
-
 TEST_F(AssembleVintfTest, DeviceFrameworkMatrixMultiple) {
     setFakeEnvs({{"POLICYVERS", "30"},
                  {"PLATFORM_SEPOLICY_VERSION", "202404"},
@@ -495,7 +472,7 @@ TEST_F(AssembleVintfTest, DeviceFrameworkMatrixMultiple) {
 
     addInput("compatibility_matrix.foobar.xml",
              "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\">\n"
-             "    <hal format=\"hidl\" optional=\"true\">\n"
+             "    <hal format=\"hidl\">\n"
              "        <name>vendor.foo.bar</name>\n"
              "        <version>1.0</version>\n"
              "        <interface>\n"
@@ -507,7 +484,7 @@ TEST_F(AssembleVintfTest, DeviceFrameworkMatrixMultiple) {
 
     addInput("compatibility_matrix.bazquux.xml",
              "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\">\n"
-             "    <hal format=\"hidl\" optional=\"true\">\n"
+             "    <hal format=\"hidl\">\n"
              "        <name>vendor.baz.quux</name>\n"
              "        <version>1.0</version>\n"
              "        <interface>\n"
@@ -520,7 +497,7 @@ TEST_F(AssembleVintfTest, DeviceFrameworkMatrixMultiple) {
     EXPECT_TRUE(getInstance()->assemble());
     EXPECT_IN(
         "<compatibility-matrix " + kMetaVersionStr + " type=\"framework\">\n"
-        "    <hal format=\"hidl\" optional=\"true\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>vendor.baz.quux</name>\n"
         "        <version>1.0</version>\n"
         "        <interface>\n"
@@ -528,7 +505,7 @@ TEST_F(AssembleVintfTest, DeviceFrameworkMatrixMultiple) {
         "            <instance>default</instance>\n"
         "        </interface>\n"
         "    </hal>\n"
-        "    <hal format=\"hidl\" optional=\"true\">\n"
+        "    <hal format=\"hidl\">\n"
         "        <name>vendor.foo.bar</name>\n"
         "        <version>1.0</version>\n"
         "        <interface>\n"
