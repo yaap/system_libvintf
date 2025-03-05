@@ -76,7 +76,8 @@ struct CompatibilityMatrix : public HalGroup<MatrixHal>,
 
    protected:
     bool forEachInstanceOfVersion(
-        HalFormat format, const std::string& package, const Version& expectVersion,
+        HalFormat format, ExclusiveTo exclusiveTo, const std::string& package,
+        const Version& expectVersion,
         const std::function<bool(const MatrixInstance&)>& func) const override;
 
    private:
@@ -145,8 +146,9 @@ struct CompatibilityMatrix : public HalGroup<MatrixHal>,
 
     // Return whether instance is in "this"; that is, instance is in any <instance> tag or
     // matches any <regex-instance> tag.
-    bool matchInstance(HalFormat format, const std::string& halName, const Version& version,
-                       const std::string& interfaceName, const std::string& instance) const;
+    bool matchInstance(HalFormat format, ExclusiveTo exclusiveTo, const std::string& halName,
+                       const Version& version, const std::string& interfaceName,
+                       const std::string& instance) const;
 
     // Return the minlts of the latest <kernel>, or empty value if any error (e.g. this is not an
     // FCM, or there are no <kernel> tags).

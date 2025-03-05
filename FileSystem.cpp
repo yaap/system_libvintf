@@ -17,10 +17,12 @@
 
 #include <vintf/FileSystem.h>
 
-#include <dirent.h>
-
 #include <android-base/file.h>
 #include <android-base/strings.h>
+
+#include <ranges>
+
+#include <dirent.h>
 
 namespace android {
 namespace vintf {
@@ -117,21 +119,21 @@ const std::string& FileSystemUnderPath::getRootDir() const {
     return mRootDir;
 }
 
-PathReplacingFileSystem::PathReplacingFileSystem(std::string path_to_replace,
-                                                 std::string path_replacement,
-                                                 std::unique_ptr<FileSystem> impl)
-    : path_to_replace_{std::move(path_to_replace)},
-      path_replacement_{std::move(path_replacement)},
-      impl_{std::move(impl)} {
+static std::string enforceTrailingSlash(const std::string& path) {
+    if (android::base::EndsWith(path, '/')) {
+        return path;
+    }
+    return path + "/";
+}
+
+PathReplacingFileSystem::PathReplacingFileSystem(
+    std::unique_ptr<FileSystem> impl, const std::map<std::string, std::string>& path_replacements)
+    : impl_{std::move(impl)} {
     // Enforce a trailing slash on the path-to-be-replaced, prevents
     // the problem (for example) of /foo matching and changing /fooxyz
-    if (!android::base::EndsWith(path_to_replace_, '/')) {
-        path_to_replace_ += "/";
-    }
-    // Enforce a trailing slash on the replacement path.  This ensures
-    // we are replacing a directory with a directory.
-    if (!android::base::EndsWith(path_replacement_, '/')) {
-        path_replacement_ += "/";
+    for (const auto& [to_replace, replacement] : path_replacements) {
+        path_replacements_.emplace(enforceTrailingSlash(to_replace),
+                                   enforceTrailingSlash(replacement));
     }
 }
 
@@ -151,12 +153,11 @@ status_t PathReplacingFileSystem::modifiedTime(const std::string& path, timespec
 }
 
 std::string PathReplacingFileSystem::path_replace(std::string_view path) const {
-    std::string retstr;
-    if (android::base::ConsumePrefix(&path, path_to_replace_)) {
-        retstr.reserve(path_replacement_.size() + path.size());
-        retstr.append(path_replacement_);
-        retstr.append(path);
-        return retstr;
+    // reverse for "longer match wins".
+    for (const auto& [to_replace, replacement] : path_replacements_ | std::views::reverse) {
+        if (android::base::ConsumePrefix(&path, to_replace)) {
+            return replacement + std::string{path};
+        }
     }
     return std::string{path};
 }

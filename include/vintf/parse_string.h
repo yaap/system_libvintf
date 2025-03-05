@@ -29,68 +29,70 @@
 namespace android {
 namespace vintf {
 
-std::ostream &operator<<(std::ostream &os, HalFormat hf);
-std::ostream &operator<<(std::ostream &os, Transport tr);
-std::ostream &operator<<(std::ostream &os, Arch ar);
-std::ostream &operator<<(std::ostream &os, KernelConfigType il);
-std::ostream &operator<<(std::ostream &os, Tristate tr);
-std::ostream &operator<<(std::ostream &os, SchemaType ksv);
+std::ostream& operator<<(std::ostream& os, HalFormat hf);
+std::ostream& operator<<(std::ostream& os, Transport tr);
+std::ostream& operator<<(std::ostream& os, Arch ar);
+std::ostream& operator<<(std::ostream& os, KernelConfigType il);
+std::ostream& operator<<(std::ostream& os, Tristate tr);
+std::ostream& operator<<(std::ostream& os, SchemaType ksv);
 std::ostream& operator<<(std::ostream& os, XmlSchemaFormat f);
 std::ostream& operator<<(std::ostream& os, Level l);
 std::ostream& operator<<(std::ostream& os, KernelSepolicyVersion v);
-std::ostream &operator<<(std::ostream &os, const Version &ver);
-std::ostream &operator<<(std::ostream &os, const VersionRange &vr);
+std::ostream& operator<<(std::ostream& os, ExclusiveTo e);
+std::ostream& operator<<(std::ostream& os, const Version& ver);
+std::ostream& operator<<(std::ostream& os, const VersionRange& vr);
 std::ostream& operator<<(std::ostream& os, const SepolicyVersion& ver);
 std::ostream& operator<<(std::ostream& os, const SepolicyVersionRange& vr);
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-std::ostream &operator<<(std::ostream &os, const VndkVersionRange &vr);
+std::ostream& operator<<(std::ostream& os, const VndkVersionRange& vr);
 #pragma clang diagnostic pop
 
-std::ostream &operator<<(std::ostream &os, const KernelVersion &ver);
-std::ostream &operator<<(std::ostream &os, const TransportArch &ta);
-std::ostream &operator<<(std::ostream &os, const ManifestHal &hal);
-std::ostream &operator<<(std::ostream &os, const KernelConfigTypedValue &kcv);
+std::ostream& operator<<(std::ostream& os, const KernelVersion& ver);
+std::ostream& operator<<(std::ostream& os, const TransportArch& ta);
+std::ostream& operator<<(std::ostream& os, const ManifestHal& hal);
+std::ostream& operator<<(std::ostream& os, const KernelConfigTypedValue& kcv);
 std::ostream& operator<<(std::ostream& os, const FqInstance& fqInstance);
 
 template <typename T>
-std::string to_string(const T &obj) {
+std::string to_string(const T& obj) {
     std::ostringstream oss;
     oss << obj;
     return oss.str();
 }
 
-bool parse(const std::string &s, HalFormat *hf);
-bool parse(const std::string &s, Transport *tr);
-bool parse(const std::string &s, Arch *ar);
-bool parse(const std::string &s, KernelConfigType *il);
-bool parse(const std::string &s, KernelConfigKey *key);
-bool parse(const std::string &s, Tristate *tr);
-bool parse(const std::string &s, SchemaType *ver);
+bool parse(const std::string& s, HalFormat* hf);
+bool parse(const std::string& s, Transport* tr);
+bool parse(const std::string& s, Arch* ar);
+bool parse(const std::string& s, KernelConfigType* il);
+bool parse(const std::string& s, KernelConfigKey* key);
+bool parse(const std::string& s, Tristate* tr);
+bool parse(const std::string& s, SchemaType* ver);
 bool parse(const std::string& s, XmlSchemaFormat* ver);
 bool parse(const std::string& s, Level* l);
-bool parse(const std::string &s, KernelSepolicyVersion *ksv);
-bool parse(const std::string &s, Version *ver);
-bool parse(const std::string &s, VersionRange *vr);
+bool parse(const std::string& s, KernelSepolicyVersion* ksv);
+bool parse(const std::string& s, ExclusiveTo* e);
+bool parse(const std::string& s, Version* ver);
+bool parse(const std::string& s, VersionRange* vr);
 bool parse(const std::string& s, SepolicyVersion* ver);
 bool parse(const std::string& s, SepolicyVersionRange* ver);
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-bool parse(const std::string &s, VndkVersionRange *vr);
+bool parse(const std::string& s, VndkVersionRange* vr);
 #pragma clang diagnostic pop
 
-bool parse(const std::string &s, KernelVersion *ver);
+bool parse(const std::string& s, KernelVersion* ver);
 bool parse(const std::string& s, FqInstance* fqInstance);
 
-bool parseKernelConfigInt(const std::string &s, int64_t *i);
-bool parseKernelConfigInt(const std::string &s, uint64_t *i);
-bool parseRange(const std::string &s, KernelConfigRangeValue *range);
+bool parseKernelConfigInt(const std::string& s, int64_t* i);
+bool parseKernelConfigInt(const std::string& s, uint64_t* i);
+bool parseRange(const std::string& s, KernelConfigRangeValue* range);
 
 // Parse the KernelConfigValue in s, assuming type kctv->type, and store it in
 // kctv->value.
-bool parseKernelConfigValue(const std::string &s, KernelConfigTypedValue *kctv);
+bool parseKernelConfigValue(const std::string& s, KernelConfigTypedValue* kctv);
 
 // Parse the KernelConfigTypedValue in s (type is guessed) and store it in kctv.
 // Do not expect quotes in strings.
@@ -108,7 +110,7 @@ bool parseAidlVersionRange(const std::string& s, VersionRange* vr);
 // A string that describes the whole object, with versions of all
 // its components. For debugging and testing purposes only. This is not
 // the XML string.
-std::string dump(const HalManifest &vm);
+std::string dump(const HalManifest& vm);
 
 std::string dump(const RuntimeInfo& ki, bool verbose = true);
 

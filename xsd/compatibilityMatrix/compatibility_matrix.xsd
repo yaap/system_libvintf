@@ -45,6 +45,7 @@
         <xs:attribute name="format" type="xs:string"/>
         <xs:attribute name="optional" type="xs:string"/>
         <xs:attribute name="updatable-via-apex" type="xs:boolean"/>
+        <xs:attribute name="exclusive-to" type="xs:string"/>
     </xs:complexType>
     <xs:complexType name="interface">
         <xs:sequence>

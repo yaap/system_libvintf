@@ -42,23 +42,27 @@ ManifestInstance& ManifestInstance::operator=(ManifestInstance&&) noexcept = def
 
 ManifestInstance::ManifestInstance(FqInstance&& fqInstance, TransportArch&& ta, HalFormat fmt,
                                    std::optional<std::string>&& updatableViaApex,
-                                   std::optional<std::string>&& accessor, bool updatableViaSystem)
+                                   ExclusiveTo exclusiveTo, std::optional<std::string>&& accessor,
+                                   bool updatableViaSystem)
     : mFqInstance(std::move(fqInstance)),
       mTransportArch(std::move(ta)),
       mHalFormat(fmt),
       mUpdatableViaApex(std::move(updatableViaApex)),
+      mExclusiveTo(std::move(exclusiveTo)),
       mAccessor(std::move(accessor)),
       mUpdatableViaSystem(std::move(updatableViaSystem)) {}
 
 ManifestInstance::ManifestInstance(const FqInstance& fqInstance, const TransportArch& ta,
                                    HalFormat fmt,
                                    const std::optional<std::string>& updatableViaApex,
+                                   ExclusiveTo exclusiveTo,
                                    const std::optional<std::string>& accessor,
                                    bool updatableViaSystem)
     : mFqInstance(fqInstance),
       mTransportArch(ta),
       mHalFormat(fmt),
       mUpdatableViaApex(updatableViaApex),
+      mExclusiveTo(exclusiveTo),
       mAccessor(accessor),
       mUpdatableViaSystem(updatableViaSystem) {}
 
@@ -100,6 +104,10 @@ HalFormat ManifestInstance::format() const {
 
 const std::optional<std::string>& ManifestInstance::updatableViaApex() const {
     return mUpdatableViaApex;
+}
+
+ExclusiveTo ManifestInstance::exclusiveTo() const {
+    return mExclusiveTo;
 }
 
 const std::optional<std::string>& ManifestInstance::accessor() const {
@@ -181,12 +189,25 @@ std::string ManifestInstance::descriptionWithoutPackage() const {
     }
 }
 
+std::string ManifestInstance::nameWithVersion() const {
+    switch (format()) {
+        case HalFormat::HIDL:
+            [[fallthrough]];
+        case HalFormat::NATIVE:
+            return toFQNameString(package(), version());
+            break;
+        case HalFormat::AIDL:
+            return package() + "@" + aidlVersionToString(version());
+            break;
+    }
+}
+
 ManifestInstance ManifestInstance::withVersion(const Version& v) const {
     FqInstance fqInstance;
     CHECK(fqInstance.setTo(getFqInstance().getPackage(), v.majorVer, v.minorVer,
                            getFqInstance().getInterface(), getFqInstance().getInstance()));
     return ManifestInstance(std::move(fqInstance), mTransportArch, format(), mUpdatableViaApex,
-                            mAccessor, mUpdatableViaSystem);
+                            mExclusiveTo, mAccessor, mUpdatableViaSystem);
 }
 
 }  // namespace vintf

@@ -809,9 +809,9 @@ bool VintfObject::IsInstanceDeprecated(const MatrixInstance& oldMatrixInstance,
             return true;  // continue
         }
 
-        auto inheritance =
-            GetListedInstanceInheritance(oldMatrixInstance.format(), package, servedVersion,
-                                         interface, servedInstance, deviceManifest, childrenMap);
+        auto inheritance = GetListedInstanceInheritance(
+            oldMatrixInstance.format(), oldMatrixInstance.exclusiveTo(), package, servedVersion,
+            interface, servedInstance, deviceManifest, childrenMap);
         if (!inheritance.has_value()) {
             accumulatedErrors.push_back(inheritance.error().message());
             return true;  // continue
@@ -819,8 +819,9 @@ bool VintfObject::IsInstanceDeprecated(const MatrixInstance& oldMatrixInstance,
 
         std::vector<std::string> errors;
         for (const auto& fqInstance : *inheritance) {
-            auto result = IsFqInstanceDeprecated(targetMatrix, oldMatrixInstance.format(),
-                                                 fqInstance, deviceManifest);
+            auto result =
+                IsFqInstanceDeprecated(targetMatrix, oldMatrixInstance.format(),
+                                       oldMatrixInstance.exclusiveTo(), fqInstance, deviceManifest);
             if (result.ok()) {
                 errors.clear();
                 break;
@@ -846,8 +847,9 @@ bool VintfObject::IsInstanceDeprecated(const MatrixInstance& oldMatrixInstance,
         accumulatedErrors.insert(accumulatedErrors.end(), errors.begin(), errors.end());
         return true;  // continue to next instance
     };
-    (void)deviceManifest->forEachInstanceOfInterface(oldMatrixInstance.format(), package, version,
-                                                     interface, addErrorForInstance);
+    (void)deviceManifest->forEachInstanceOfInterface(oldMatrixInstance.format(),
+                                                     oldMatrixInstance.exclusiveTo(), package,
+                                                     version, interface, addErrorForInstance);
 
     if (accumulatedErrors.empty()) {
         return false;
@@ -858,11 +860,12 @@ bool VintfObject::IsInstanceDeprecated(const MatrixInstance& oldMatrixInstance,
 
 // Check if fqInstance is listed in |deviceManifest|.
 bool VintfObject::IsInstanceListed(const std::shared_ptr<const HalManifest>& deviceManifest,
-                                   HalFormat format, const FqInstance& fqInstance) {
+                                   HalFormat format, ExclusiveTo exclusiveTo,
+                                   const FqInstance& fqInstance) {
     bool found = false;
     (void)deviceManifest->forEachInstanceOfInterface(
-        format, fqInstance.getPackage(), fqInstance.getVersion(), fqInstance.getInterface(),
-        [&](const ManifestInstance& manifestInstance) {
+        format, exclusiveTo, fqInstance.getPackage(), fqInstance.getVersion(),
+        fqInstance.getInterface(), [&](const ManifestInstance& manifestInstance) {
             if (manifestInstance.instance() == fqInstance.getInstance()) {
                 found = true;
             }
@@ -875,7 +878,7 @@ bool VintfObject::IsInstanceListed(const std::shared_ptr<const HalManifest>& dev
 // - is listed in |deviceManifest|; AND
 // - is, or inherits from, package@version::interface/instance (as specified by |childrenMap|)
 android::base::Result<std::vector<FqInstance>> VintfObject::GetListedInstanceInheritance(
-    HalFormat format, const std::string& package, const Version& version,
+    HalFormat format, ExclusiveTo exclusiveTo, const std::string& package, const Version& version,
     const std::string& interface, const std::string& instance,
     const std::shared_ptr<const HalManifest>& deviceManifest, const ChildrenMap& childrenMap) {
     FqInstance fqInstance;
@@ -884,7 +887,7 @@ android::base::Result<std::vector<FqInstance>> VintfObject::GetListedInstanceInh
                                       << " is not a valid FqInstance";
     }
 
-    if (!IsInstanceListed(deviceManifest, format, fqInstance)) {
+    if (!IsInstanceListed(deviceManifest, format, exclusiveTo, fqInstance)) {
         return {};
     }
 
@@ -908,7 +911,7 @@ android::base::Result<std::vector<FqInstance>> VintfObject::GetListedInstanceInh
                                           << fqInstance.getInstance() << " as FqInstance";
             continue;
         }
-        if (!IsInstanceListed(deviceManifest, format, childFqInstance)) {
+        if (!IsInstanceListed(deviceManifest, format, exclusiveTo, childFqInstance)) {
             continue;
         }
         ret.push_back(childFqInstance);
@@ -922,13 +925,13 @@ android::base::Result<std::vector<FqInstance>> VintfObject::GetListedInstanceInh
 // 2. package@x.z::interface/servedInstance is in targetMatrix but
 //    servedInstance is not in deviceManifest(package@x.z::interface)
 android::base::Result<void> VintfObject::IsFqInstanceDeprecated(
-    const CompatibilityMatrix& targetMatrix, HalFormat format, const FqInstance& fqInstance,
-    const std::shared_ptr<const HalManifest>& deviceManifest) {
+    const CompatibilityMatrix& targetMatrix, HalFormat format, ExclusiveTo exclusiveTo,
+    const FqInstance& fqInstance, const std::shared_ptr<const HalManifest>& deviceManifest) {
     // Find minimum package@x.? in target matrix, and check if instance is in target matrix.
     bool foundInstance = false;
     Version targetMatrixMinVer{SIZE_MAX, SIZE_MAX};
     targetMatrix.forEachInstanceOfPackage(
-        format, fqInstance.getPackage(), [&](const auto& targetMatrixInstance) {
+        format, exclusiveTo, fqInstance.getPackage(), [&](const auto& targetMatrixInstance) {
             if (targetMatrixInstance.versionRange().majorVer == fqInstance.getMajorVersion() &&
                 targetMatrixInstance.interface() == fqInstance.getInterface() &&
                 targetMatrixInstance.matchInstance(fqInstance.getInstance())) {
@@ -948,7 +951,7 @@ android::base::Result<void> VintfObject::IsFqInstanceDeprecated(
     bool targetVersionServed = false;
 
     (void)deviceManifest->forEachInstanceOfInterface(
-        format, fqInstance.getPackage(), targetMatrixMinVer, fqInstance.getInterface(),
+        format, exclusiveTo, fqInstance.getPackage(), targetMatrixMinVer, fqInstance.getInterface(),
         [&](const ManifestInstance& manifestInstance) {
             if (manifestInstance.instance() == fqInstance.getInstance()) {
                 targetVersionServed = true;

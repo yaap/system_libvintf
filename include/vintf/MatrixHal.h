@@ -22,6 +22,7 @@
 #include <string>
 #include <vector>
 
+#include "ExclusiveTo.h"
 #include "HalFormat.h"
 #include "HalInterface.h"
 #include "MatrixInstance.h"
@@ -42,6 +43,7 @@ struct MatrixHal {
     std::string name;
     std::vector<VersionRange> versionRanges;
     bool optional = false;
+    ExclusiveTo exclusiveTo = ExclusiveTo::EMPTY;
     bool updatableViaApex = false;
     std::map<std::string, HalInterface> interfaces;
 

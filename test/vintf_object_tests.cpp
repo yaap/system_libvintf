@@ -238,6 +238,14 @@ const std::string systemMatrixLevel1 =
     "            <instance>default</instance>\n"
     "        </interface>\n"
     "    </hal>\n"
+    "    <hal format=\"aidl\" exclusive-to=\"virtual-machine\">\n"
+    "        <name>android.hardware.vm.removed</name>\n"
+    "        <version>2</version>\n"
+    "        <interface>\n"
+    "            <name>IRemoved</name>\n"
+    "            <instance>default</instance>\n"
+    "        </interface>\n"
+    "    </hal>\n"
     "</compatibility-matrix>\n";
 
 const std::string systemMatrixLevel2 =
@@ -263,6 +271,14 @@ const std::string systemMatrixLevel2 =
     "        <version>102</version>\n"
     "        <interface>\n"
     "            <name>IMinor</name>\n"
+    "            <instance>default</instance>\n"
+    "        </interface>\n"
+    "    </hal>\n"
+    "    <hal format=\"aidl\" exclusive-to=\"virtual-machine\">\n"
+    "        <name>android.hardware.vm.removed</name>\n"
+    "        <version>3</version>\n"
+    "        <interface>\n"
+    "            <name>IRemoved</name>\n"
     "            <instance>default</instance>\n"
     "        </interface>\n"
     "    </hal>\n"
@@ -547,7 +563,8 @@ class VintfObjectTestBase : public ::testing::Test {
 
     // clang-format on
     void expectVendorManifest(Level level, const std::vector<std::string>& fqInstances,
-                              const std::vector<FqInstance>& aidlInstances = {}) {
+                              const std::vector<FqInstance>& aidlInstances = {},
+                              ExclusiveTo exclusiveTo = ExclusiveTo::EMPTY) {
         std::string xml =
             android::base::StringPrintf(R"(<manifest %s type="device" target-level="%s">)",
                                         kMetaVersionStr.c_str(), to_string(level).c_str());
@@ -570,12 +587,13 @@ class VintfObjectTestBase : public ::testing::Test {
         for (const auto& fqInstance : aidlInstances) {
             xml += android::base::StringPrintf(
                 R"(
-                    <hal format="aidl">
+                    <hal format="aidl" exclusive-to="%s">
                         <name>%s</name>
                         <version>%zu</version>
                         <fqname>%s</fqname>
                     </hal>
                 )",
+                gExclusiveToStrings.at(static_cast<size_t>(exclusiveTo)),
                 fqInstance.getPackage().c_str(), fqInstance.getMinorVersion(),
                 toFQNameString(fqInstance.getInterface(), fqInstance.getInstance()).c_str());
         }
@@ -879,9 +897,9 @@ class DeviceManifestTest : public VintfObjectTestBase {
     void expectApex(const std::string& halManifest = apexHalManifest) {
         expectFetchRepeatedly(kApexInfoFile, R"(<apex-info-list>
             <apex-info moduleName="com.test"
-                preinstalledModulePath="/vendor/apex/com.test.apex" isActive="true"/>
+                partition="VENDOR" isActive="true"/>
             <apex-info moduleName="com.novintf"
-                preinstalledModulePath="/vendor/apex/com.novintf.apex" isActive="true"/>
+                partition="VENDOR" isActive="true"/>
         </apex-info-list>)");
         EXPECT_CALL(fetcher(), modifiedTime(kApexInfoFile, _, _))
             .WillOnce(Invoke([](auto, timespec* out, auto){
@@ -1068,7 +1086,7 @@ TEST_F(VendorApexTest, ReadBootstrapApexBeforeApexReady) {
             out = R"(<?xml version="1.0" encoding="utf-8"?>
                 <apex-info-list>
                     <apex-info moduleName="com.vendor.foo"
-                            preinstalledModulePath="/vendor/apex/foo.apex"
+                            partition="VENDOR"
                             isActive="true" />
                 </apex-info-list>)";
             return ::android::OK;
@@ -1244,7 +1262,7 @@ TEST_F(ManifestOverrideTest, NoOverrideForVendorApex) {
         R"(<apex-info-list>
           <apex-info
             moduleName="com.android.foo"
-            preinstalledModulePath="/vendor/apex/com.android.foo.apex"
+            partition="VENDOR"
             isActive="true"/>
         </apex-info-list>)");
     expect("/apex/com.android.foo/etc/vintf/foo.xml",
@@ -1267,7 +1285,7 @@ TEST_F(ManifestOverrideTest, OdmOverridesVendorApex) {
         R"(<apex-info-list>
             <apex-info
                 moduleName="com.android.foo"
-                preinstalledModulePath="/vendor/apex/com.android.foo.apex"
+                partition="VENDOR"
                 isActive="true"/>
             </apex-info-list>)");
     expect("/apex/com.android.foo/etc/vintf/foo.xml",
@@ -1362,6 +1380,33 @@ TEST_F(DeprecateTest, CheckRemovedSystem) {
     std::string error;
     EXPECT_EQ(DEPRECATED, vintfObject->checkDeprecation({}, &error))
         << "removed@1.0 should be deprecated. " << error;
+}
+
+TEST_F(DeprecateTest, CheckRemovedVersionAccess) {
+    expectVendorManifest(Level{2}, {}, {aidlFqInstance("android.hardware.vm.removed", 2, "IRemoved",
+                                                       "default")}, ExclusiveTo::VM);
+    std::string error;
+    EXPECT_EQ(DEPRECATED, vintfObject->checkDeprecation({}, &error))
+        << "removed@2 should be deprecated. " << error;
+    EXPECT_IN("android.hardware.vm.removed", error);
+    EXPECT_IN("is deprecated; requires at least", error);
+}
+
+TEST_F(DeprecateTest, CheckOkVersionSystemAccess) {
+    expectVendorManifest(Level{2}, {}, {aidlFqInstance("android.hardware.vm.removed", 3, "IRemoved",
+                                                       "default")}, ExclusiveTo::VM);
+    std::string error;
+    EXPECT_EQ(NO_DEPRECATED_HALS, vintfObject->checkDeprecation({}, &error))
+        << "V3 should be allowed at level 2" << error;
+}
+
+TEST_F(DeprecateTest, CheckRemovedSystemAccessWrong) {
+    expectVendorManifest(Level{2}, {}, {aidlFqInstance("android.hardware.vm.removed", 2, "IRemoved",
+                                                       "default")}, ExclusiveTo::EMPTY);
+    std::string error;
+    EXPECT_EQ(NO_DEPRECATED_HALS, vintfObject->checkDeprecation({}, &error))
+        << "There is no entry for this HAL with ExclusiveTo::EMPTY so it "
+        << "should not show as deprecated." << error;
 }
 
 TEST_F(DeprecateTest, CheckRemovedSystemAidl) {
@@ -2204,7 +2249,7 @@ class FrameworkManifestTest : public VintfObjectTestBase,
             <apex-info-list>
                 <apex-info
                     moduleName="com.system"
-                    preinstalledModulePath="/system/apex/com.system.apex"
+                    partition="SYSTEM"
                     isActive="true"/>
             </apex-info-list>)");
         EXPECT_CALL(fetcher(), modifiedTime(kApexInfoFile, _, _))

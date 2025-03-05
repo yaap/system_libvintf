@@ -338,14 +338,15 @@ class VintfObject {
                                      const ChildrenMap& childrenMap, std::string* appendedError);
 
     static android::base::Result<std::vector<FqInstance>> GetListedInstanceInheritance(
-        HalFormat format, const std::string& package, const Version& version,
-        const std::string& interface, const std::string& instance,
+        HalFormat format, ExclusiveTo exclusiveTo, const std::string& package,
+        const Version& version, const std::string& interface, const std::string& instance,
         const std::shared_ptr<const HalManifest>& halManifest, const ChildrenMap& childrenMap);
     static bool IsInstanceListed(const std::shared_ptr<const HalManifest>& halManifest,
-                                 HalFormat format, const FqInstance& fqInstance);
+                                 HalFormat format, ExclusiveTo exclusiveTo,
+                                 const FqInstance& fqInstance);
     static android::base::Result<void> IsFqInstanceDeprecated(
-        const CompatibilityMatrix& targetMatrix, HalFormat format, const FqInstance& fqInstance,
-        const std::shared_ptr<const HalManifest>& halManifest);
+        const CompatibilityMatrix& targetMatrix, HalFormat format, ExclusiveTo exclusiveTo,
+        const FqInstance& fqInstance, const std::shared_ptr<const HalManifest>& halManifest);
 
    public:
     class Builder;

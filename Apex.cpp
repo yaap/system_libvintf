@@ -69,11 +69,8 @@ static status_t GetVintfDirs(FileSystem* fileSystem, PropertyFetcher* propertyFe
     for (const auto& apexInfo : apexInfoList->getApexInfo()) {
         // Skip non-active apexes
         if (!apexInfo.getIsActive()) continue;
-        // Skip if no preinstalled paths. This shouldn't happen but XML schema says it's optional.
-        if (!apexInfo.hasPreinstalledModulePath()) continue;
 
-        const std::string& path = apexInfo.getPreinstalledModulePath();
-        if (filter(path)) {
+        if (filter(apexInfo.getPartition())) {
             dirs->push_back(fmt::format("{}/{}/" VINTF_SUB_DIR, apexDir, apexInfo.getModuleName()));
         }
     }
@@ -102,19 +99,16 @@ std::optional<timespec> GetModifiedTime(FileSystem* fileSystem, PropertyFetcher*
 
 status_t GetDeviceVintfDirs(FileSystem* fileSystem, PropertyFetcher* propertyFetcher,
                             std::vector<std::string>* dirs, std::string* error) {
-    return GetVintfDirs(fileSystem, propertyFetcher, dirs, error, [](const std::string& path) {
-        return StartsWith(path, "/vendor/apex/") || StartsWith(path, "/system/vendor/apex/") ||
-               StartsWith(path, "/odm/apex/") || StartsWith(path, "/vendor/odm/apex/") ||
-               StartsWith(path, "/system/vendor/odm/apex/");
+    return GetVintfDirs(fileSystem, propertyFetcher, dirs, error, [](const std::string& partition) {
+        return partition.compare("VENDOR") == 0 || partition.compare("ODM") == 0;
     });
 }
 
 status_t GetFrameworkVintfDirs(FileSystem* fileSystem, PropertyFetcher* propertyFetcher,
                                std::vector<std::string>* dirs, std::string* error) {
-    return GetVintfDirs(fileSystem, propertyFetcher, dirs, error, [](const std::string& path) {
-        return StartsWith(path, "/system/apex/") || StartsWith(path, "/system_ext/apex/") ||
-               StartsWith(path, "/system/system_ext/apex/") || StartsWith(path, "/product/apex/") ||
-               StartsWith(path, "/system/product/apex/");
+    return GetVintfDirs(fileSystem, propertyFetcher, dirs, error, [](const std::string& partition) {
+        return partition.compare("SYSTEM") == 0 || partition.compare("SYSTEM_EXT") == 0 ||
+               partition.compare("PRODUCT") == 0;
     });
 }
 
