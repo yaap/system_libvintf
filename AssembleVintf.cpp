@@ -545,8 +545,10 @@ class AssembleVintfImpl : public AssembleVintf {
             // Use manifest.kernel()->level() directly because inferredKernelLevel()
             // reads manifest.level().
             manifest.kernel().has_value() && manifest.kernel()->level() != Level::UNSPECIFIED) {
-            err() << "Error: Device manifest with level " << manifest.level()
-                  << " must not set kernel level " << manifest.kernel()->level() << std::endl;
+            err() << "Error: Device manifest with target-level " << manifest.level()
+                  << " must not explicitly set kernel level in the manifest file. "
+                  << "The kernel level is currently explicitly set to "
+                  << manifest.kernel()->level() << std::endl;
             return false;
         }
         return true;
