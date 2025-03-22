@@ -184,7 +184,7 @@ def ReadMatrices(args: argparse.Namespace) -> dict[int, MatrixData]:
       logger.debug("Ignoring file %s", file)
       continue
     action = "--instances" if args.instances else "--interfaces"
-    instances = Analyze(args.analyze_matrix, file, [action, "--requirement"]).split("\n")
+    instances = Analyze(args.analyze_matrix, file, [action,]).split("\n")
     instances = set(map(str.strip, instances)) - {""}
     if level in matrices:
       logger.warning("Found duplicated matrix for level %s, ignoring: %s", level, file)
@@ -390,13 +390,13 @@ class HumanReadableReport(Report):
     desc = lambda fmt, instance: fmt.format(GetHalFormat(instance).name,
                                             *SplitInstance(instance))
     if self.args.deprecated:
-      package_report += [desc("- {0} {2} can no longer be used", instance)
+      package_report += [desc("- {0} {2} {3} can no longer be used", instance)
                          for instance in deprecated]
     if self.args.unchanged:
-      package_report += [desc("  {0} {2}", instance) for instance in
+      package_report += [desc("  {0} {2} {3}", instance) for instance in
                          unchanged]
     if self.args.introduced:
-      package_report += [desc("+ {0} {2}", instance) for instance in
+      package_report += [desc("+ {0} {2} {3}", instance) for instance in
                          introduced]
 
     return package_report
