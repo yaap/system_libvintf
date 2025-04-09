@@ -1110,7 +1110,8 @@ android::base::Result<bool> VintfObject::hasFrameworkCompatibilityMatrixExtensio
 }
 
 android::base::Result<void> VintfObject::checkUnusedHals(
-    const std::vector<HidlInterfaceMetadata>& hidlMetadata) {
+    const std::vector<HidlInterfaceMetadata>& hidlMetadata,
+    const std::function<bool(const std::string&)>& shouldCheckPackage) {
     auto matrix = getFrameworkCompatibilityMatrix();
     if (matrix == nullptr) {
         return android::base::Error(-NAME_NOT_FOUND) << "Missing framework matrix.";
@@ -1119,7 +1120,7 @@ android::base::Result<void> VintfObject::checkUnusedHals(
     if (manifest == nullptr) {
         return android::base::Error(-NAME_NOT_FOUND) << "Missing device manifest.";
     }
-    auto unused = manifest->checkUnusedHals(*matrix, hidlMetadata);
+    auto unused = manifest->checkUnusedHals(*matrix, hidlMetadata, shouldCheckPackage);
     if (!unused.empty()) {
         return android::base::Error()
                << "The following instances are in the device manifest but "
@@ -1132,7 +1133,10 @@ android::base::Result<void> VintfObject::checkUnusedHals(
                << "3. For new platform HALs, add them to any framework compatibility matrix "
                << "with FCM version >= " << matrix->level() << " where applicable.\n"
                << "4. For device-specific HALs, add to DEVICE_FRAMEWORK_COMPATIBILITY_MATRIX_FILE "
-               << "or DEVICE_PRODUCT_COMPATIBILITY_MATRIX_FILE.";
+               << "or DEVICE_PRODUCT_COMPATIBILITY_MATRIX_FILE.\n"
+               << "5. For `android.*` HALs that are using unexpected instance names, the instance "
+               << "names need to be added to the AOSP framework compatibility matrices. A regex "
+               << "wildcard can be used if the instance names are proprietary.\n";
     }
     return {};
 }

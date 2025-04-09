@@ -347,7 +347,8 @@ void multilineIndent(std::ostream& os, size_t indent, const Container& lines) {
 }
 
 std::set<std::string> HalManifest::checkUnusedHals(
-    const CompatibilityMatrix& mat, const std::vector<HidlInterfaceMetadata>& hidlMetadata) const {
+    const CompatibilityMatrix& mat, const std::vector<HidlInterfaceMetadata>& hidlMetadata,
+    const std::function<bool(const std::string&)>& shouldCheckPackage) const {
     std::multimap<std::string, std::string> childrenMap;
     for (const auto& child : hidlMetadata) {
         for (const auto& parent : child.inherited) {
@@ -357,7 +358,11 @@ std::set<std::string> HalManifest::checkUnusedHals(
 
     std::set<std::string> ret;
 
-    forEachInstance([&ret, &mat, &childrenMap](const auto& manifestInstance) {
+    forEachInstance([&ret, &mat, &childrenMap, &shouldCheckPackage](const auto& manifestInstance) {
+        // Don't report this instance as unused if the caller doesn't want it
+        // checked.
+        if (!shouldCheckPackage(manifestInstance.package())) return true;
+
         if (mat.matchInstance(manifestInstance.format(), manifestInstance.exclusiveTo(),
                               manifestInstance.package(), manifestInstance.version(),
                               manifestInstance.interface(), manifestInstance.instance())) {

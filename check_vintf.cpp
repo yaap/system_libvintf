@@ -437,7 +437,8 @@ android::base::Result<void> checkAllFiles(const Dirmap& dirmap, const Properties
     }
 
     if (hasFcmExt.value_or(false) || (targetFcm != Level::UNSPECIFIED && targetFcm >= Level::R)) {
-        AddResult(&retError, vintfObject->checkUnusedHals(hidlMetadata));
+        AddResult(&retError, vintfObject->checkUnusedHals(hidlMetadata,
+                                                          [](const std::string&) { return true; }));
     } else {
         LOG(INFO) << "Skip checking unused HALs.";
     }
