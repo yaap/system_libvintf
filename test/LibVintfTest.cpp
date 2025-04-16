@@ -127,7 +127,7 @@ public:
         return cm1->addAllXmlFilesAsOptional(cm2, e);
     }
     std::set<std::string> checkUnusedHals(const HalManifest& m, const CompatibilityMatrix& cm) {
-        return m.checkUnusedHals(cm, {});
+        return m.checkUnusedHals(cm, {}, [](const std::string&) { return true; });
     }
     Level getLevel(const KernelInfo& ki) { return ki.level(); }
     static status_t parseGkiKernelRelease(RuntimeInfo::FetchFlags flags,
