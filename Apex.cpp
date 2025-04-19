@@ -19,7 +19,9 @@
 
 #include <android-base/logging.h>
 #include <android-base/strings.h>
-
+#ifdef LIBVINTF_TARGET
+#include "com_android_apex_flags.h"
+#endif
 #include "com_android_apex.h"
 #include "constants-private.h"
 
@@ -38,6 +40,15 @@ constexpr const char* ODM = "ODM";
 
 static bool isApexReady(PropertyFetcher* propertyFetcher) {
 #ifdef LIBVINTF_TARGET
+    if constexpr (com::android::apex::flags::mount_before_data()) {
+        // "APEX ready" here means that the APEXes in the default mount
+        // namespace are ready to use. If init started with a single mount
+        // namespace, no need to wait for "APEX ready" because all APEXes are
+        // activated early.
+        if (propertyFetcher->getUintProperty("ro.init.mnt_ns.count", 2) == 1) {
+            return true;
+        }
+    }
     return propertyFetcher->getBoolProperty("apex.all.ready", false);
 #else
     // When running on host, it assumes that /apex is ready.
