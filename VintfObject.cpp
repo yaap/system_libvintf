@@ -941,8 +941,7 @@ android::base::Result<void> VintfObject::IsFqInstanceDeprecated(
     targetMatrix.forEachInstanceOfPackage(
         format, exclusiveTo, fqInstance.getPackage(), [&](const auto& targetMatrixInstance) {
             if (targetMatrixInstance.versionRange().majorVer == fqInstance.getMajorVersion() &&
-                targetMatrixInstance.interface() == fqInstance.getInterface() &&
-                targetMatrixInstance.matchInstance(fqInstance.getInstance())) {
+                targetMatrixInstance.interface() == fqInstance.getInterface()) {
                 targetMatrixMinVer =
                     std::min(targetMatrixMinVer, targetMatrixInstance.versionRange().minVer());
                 foundInstance = true;
