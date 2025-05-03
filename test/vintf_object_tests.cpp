@@ -1459,8 +1459,8 @@ TEST_F(DeprecateTest, CheckMinorDeprecatedInstance2) {
         "android.hardware.major@2.0::IMajor/default",
     });
     std::string error;
-    EXPECT_EQ(DEPRECATED, vintfObject->checkDeprecation({}, &error))
-        << "minor@1.1::IMinor/legacy should be deprecated. " << error;
+    EXPECT_EQ(NO_DEPRECATED_HALS, vintfObject->checkDeprecation({}, &error))
+        << "None of these HALs are deprecated. " << error;
 }
 
 TEST_F(DeprecateTest, CheckMajor1) {
@@ -1776,6 +1776,7 @@ TEST_F(RegexTest, DeprecateLevel2) {
 }
 
 class RegexTestDeprecateLevel2P : public RegexTest, public WithParamInterface<const char*> {};
+// We find deprecated HALs based on the interface, not the instance name
 TEST_P(RegexTestDeprecateLevel2P, Test) {
     auto deprecated = GetParam();
     std::string error;
@@ -1792,9 +1793,29 @@ INSTANTIATE_TEST_SUITE_P(RegexTest, RegexTestDeprecateLevel2P,
                          ::testing::Values("android.hardware.regex@1.0::IRegex/default",
                                            "android.hardware.regex@1.0::IRegex/special/1.0",
                                            "android.hardware.regex@1.0::IRegex/regex/1.0/1",
-                                           "android.hardware.regex@1.0::IRegex/regex_common/0",
-                                           "android.hardware.regex@1.1::IRegex/special/1.0",
-                                           "android.hardware.regex@1.1::IRegex/regex/1.0/1"));
+                                           "android.hardware.regex@1.0::IRegex/regex_common/0"));
+
+class RegexTestNonDeprecatedUnknownInstances : public RegexTest,
+                                               public WithParamInterface<const char*> {};
+// We find deprecated HALs based on the interface, not the instance name
+TEST_P(RegexTestNonDeprecatedUnknownInstances, Test) {
+    auto deprecated = GetParam();
+    std::string error;
+    // 2.0/default ensures compatibility.
+    expectVendorManifest(Level{2}, {
+                                       deprecated,
+                                       "android.hardware.regex@2.0::IRegex/default",
+                                   });
+    EXPECT_EQ(NO_DEPRECATED_HALS, vintfObject->checkDeprecation({}, &error))
+        << deprecated << " should not be deprecated. " << error;
+}
+
+INSTANTIATE_TEST_SUITE_P(RegexTest, RegexTestNonDeprecatedUnknownInstances,
+                         ::testing::Values("android.hardware.regex@1.1::IRegex/special/1.0",
+                                           "android.hardware.regex@1.1::IRegex/regex/1.0/1",
+                                           "android.hardware.regex@1.1::IRegex/unknown_name",
+                                           "android.hardware.regex@1.2::IRegex/special/1.0",
+                                           "android.hardware.regex@1.2::IRegex/unknown_name"));
 
 TEST_F(RegexTest, DeprecateLevel3) {
     std::string error;
