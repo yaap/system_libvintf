@@ -17,6 +17,7 @@
 
 """
 Dump new HALs that are introduced in each FCM version in a human-readable format.
+Before using this script,'m analyze_matrix' must be run.
 
 Example:
 hals_for_release.py
