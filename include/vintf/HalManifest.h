@@ -201,7 +201,8 @@ struct HalManifest : public HalGroup<ManifestHal>,
     // check based on their package name.
     std::set<std::string> checkUnusedHals(
         const CompatibilityMatrix& mat, const std::vector<HidlInterfaceMetadata>& hidlMetadata,
-        const std::function<bool(const std::string&)>& shouldCheckPackage) const;
+        const std::function<bool(const std::string&)>& shouldCheckPackage,
+        bool shouldCheckInstanceName) const;
 
     // Check that manifest has no entries.
     bool empty() const;
