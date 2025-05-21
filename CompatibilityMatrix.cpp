@@ -449,6 +449,19 @@ bool CompatibilityMatrix::forEachInstanceOfVersion(
     return true;
 }
 
+bool CompatibilityMatrix::matchInterface(HalFormat format, ExclusiveTo exclusiveTo,
+                                        const std::string& halName, const Version& version,
+                                        const std::string& interfaceName) const {
+    bool found = false;
+    (void)forEachInstanceOfInterface(format, exclusiveTo, halName, version, interfaceName,
+                                     [&found](const auto&) {
+                                         found = true;
+                                         return false;  // no need to keep looking
+                                     });
+    return found;
+}
+
+
 bool CompatibilityMatrix::matchInstance(HalFormat format, ExclusiveTo exclusiveTo,
                                         const std::string& halName, const Version& version,
                                         const std::string& interfaceName,
