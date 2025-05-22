@@ -16,6 +16,7 @@
 
 #include "CompatibilityMatrix.h"
 
+#include <algorithm>
 #include <iostream>
 #include <utility>
 
