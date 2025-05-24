@@ -1110,7 +1110,8 @@ android::base::Result<bool> VintfObject::hasFrameworkCompatibilityMatrixExtensio
 
 android::base::Result<void> VintfObject::checkUnusedHals(
     const std::vector<HidlInterfaceMetadata>& hidlMetadata,
-    const std::function<bool(const std::string&)>& shouldCheckPackage) {
+    const std::function<bool(const std::string&)>& shouldCheckPackage,
+    bool shouldCheckInstanceName) {
     auto matrix = getFrameworkCompatibilityMatrix();
     if (matrix == nullptr) {
         return android::base::Error(-NAME_NOT_FOUND) << "Missing framework matrix.";
@@ -1119,10 +1120,13 @@ android::base::Result<void> VintfObject::checkUnusedHals(
     if (manifest == nullptr) {
         return android::base::Error(-NAME_NOT_FOUND) << "Missing device manifest.";
     }
-    auto unused = manifest->checkUnusedHals(*matrix, hidlMetadata, shouldCheckPackage);
+    auto unused = manifest->checkUnusedHals(*matrix, hidlMetadata, shouldCheckPackage,
+                                            shouldCheckInstanceName);
     if (!unused.empty()) {
         return android::base::Error()
-               << "The following instances are in the device manifest but "
+               << "The following "
+               << (shouldCheckInstanceName ? "instances" : "interfaces")
+               << " are in the device manifest but "
                << "not specified in framework compatibility matrix: \n"
                << "    " << android::base::Join(unused, "\n    ") << "\n"
                << "Suggested fix:\n"

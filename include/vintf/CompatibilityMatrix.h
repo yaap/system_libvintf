@@ -149,6 +149,9 @@ struct CompatibilityMatrix : public HalGroup<MatrixHal>,
     bool matchInstance(HalFormat format, ExclusiveTo exclusiveTo, const std::string& halName,
                        const Version& version, const std::string& interfaceName,
                        const std::string& instance) const;
+    // Return whether the interface is in "this".
+    bool matchInterface(HalFormat format, ExclusiveTo exclusiveTo, const std::string& halName,
+                        const Version& version, const std::string& interfaceName) const;
 
     // Return the minlts of the latest <kernel>, or empty value if any error (e.g. this is not an
     // FCM, or there are no <kernel> tags).
@@ -188,7 +191,7 @@ struct CompatibilityMatrix : public HalGroup<MatrixHal>,
     } device;
 };
 
-} // namespace vintf
-} // namespace android
+}  // namespace vintf
+}  // namespace android
 
-#endif // ANDROID_VINTF_COMPATIBILITY_MATRIX_H
+#endif  // ANDROID_VINTF_COMPATIBILITY_MATRIX_H
