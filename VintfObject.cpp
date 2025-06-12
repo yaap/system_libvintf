@@ -279,12 +279,26 @@ status_t VintfObject::addDirectoriesManifests(const std::vector<std::string>& di
     return OK;
 }
 
-// Fetch fragments from apexes originated from /vendor.
-// For now, we don't have /odm apexes.
-status_t VintfObject::fetchDeviceHalManifestApex(HalManifest* out, std::string* error) {
-    std::vector<std::string> dirs;
+// Fetch fragments originated from /vendor including apexes:
+// - /vendor/etc/vintf/manifest/
+// - /apex/{vendor apex}/etc/vintf/
+status_t VintfObject::fetchVendorHalFragments(HalManifest* out, std::string* error) {
+    std::vector<std::string> dirs = {kVendorManifestFragmentDir};
     status_t status =
-        apex::GetDeviceVintfDirs(getFileSystem().get(), getPropertyFetcher().get(), &dirs, error);
+        apex::GetVendorVintfDirs(getFileSystem().get(), getPropertyFetcher().get(), &dirs, error);
+    if (status != OK) {
+        return status;
+    }
+    return addDirectoriesManifests(dirs, out, /*forceSchemaType=*/false, error);
+}
+
+// Fetch fragments originated from /odm including apexes:
+// - /odm/etc/vintf/manifest/
+// - /apex/{odm apex}/etc/vintf/
+status_t VintfObject::fetchOdmHalFragments(HalManifest* out, std::string* error) {
+    std::vector<std::string> dirs = {kOdmManifestFragmentDir};
+    status_t status =
+        apex::GetOdmVintfDirs(getFileSystem().get(), getPropertyFetcher().get(), &dirs, error);
     if (status != OK) {
         return status;
     }
@@ -292,8 +306,8 @@ status_t VintfObject::fetchDeviceHalManifestApex(HalManifest* out, std::string* 
 }
 
 // Priority for loading vendor manifest:
-// 1. Vendor manifest + device fragments (including vapex) + ODM manifest (optional) + odm fragments
-// 2. Vendor manifest + device fragments (including vapex)
+// 1. Vendor manifest + vendor fragments + ODM manifest (optional) + odm fragments
+// 2. Vendor manifest + vendor fragments
 // 3. ODM manifest (optional) + odm fragments
 // 4. /vendor/manifest.xml (legacy, no fragments)
 // where:
@@ -308,15 +322,9 @@ status_t VintfObject::fetchDeviceHalManifest(HalManifest* out, std::string* erro
 
     if (vendorStatus == OK) {
         *out = std::move(vendorManifest);
-        status_t fragmentStatus = addDirectoryManifests(kVendorManifestFragmentDir, out,
-                                                        false /* forceSchemaType*/, error);
+        status_t fragmentStatus = fetchVendorHalFragments(out, error);
         if (fragmentStatus != OK) {
             return fragmentStatus;
-        }
-
-        status_t apexStatus = fetchDeviceHalManifestApex(out, error);
-        if (apexStatus != OK) {
-            return apexStatus;
         }
     }
 
@@ -335,15 +343,13 @@ status_t VintfObject::fetchDeviceHalManifest(HalManifest* out, std::string* erro
                 return UNKNOWN_ERROR;
             }
         }
-        return addDirectoryManifests(kOdmManifestFragmentDir, out, false /* forceSchemaType */,
-                                     error);
+        return fetchOdmHalFragments(out, error);
     }
 
     // vendorStatus != OK, "out" is not changed.
     if (odmStatus == OK) {
         *out = std::move(odmManifest);
-        return addDirectoryManifests(kOdmManifestFragmentDir, out, false /* forceSchemaType */,
-                                     error);
+        return fetchOdmHalFragments(out, error);
     }
 
     // Use legacy /vendor/manifest.xml
@@ -804,8 +810,10 @@ bool VintfObject::IsInstanceDeprecated(const MatrixInstance& oldMatrixInstance,
     auto addErrorForInstance = [&](const ManifestInstance& manifestInstance) {
         const std::string& servedInstance = manifestInstance.instance();
         Version servedVersion = manifestInstance.version();
-        if (!oldMatrixInstance.matchInstance(servedInstance)) {
-            // ignore unrelated instance
+
+        // ignore unrelated instance on old devices only
+        if (!oldMatrixInstance.matchInstance(servedInstance) &&
+            deviceManifest->level() < Level::B) {
             return true;  // continue
         }
 
@@ -1005,8 +1013,14 @@ int32_t VintfObject::checkDeprecation(const std::vector<HidlInterfaceMetadata>& 
     // Move these matrices into the targetMatrices vector...
     std::move(targetMatricesPartition, matrixFragments.end(), std::back_inserter(targetMatrices));
     if (targetMatrices.empty()) {
-        if (error)
-            *error = "Cannot find framework matrix at FCM version " + to_string(deviceLevel) + ".";
+        if (error) {
+            std::vector<std::string> files;
+            for (const auto& matrix : matrixFragments) {
+                files.push_back(matrix.fileName());
+            }
+            *error = "Cannot find framework matrix at FCM version " + to_string(deviceLevel) +
+                     ". Looked in:\n    " + android::base::Join(files, "\n    ");
+        }
         return NAME_NOT_FOUND;
     }
     // so that they can be combined into one matrix for deprecation checking.

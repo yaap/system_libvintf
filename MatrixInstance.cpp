@@ -35,22 +35,19 @@ MatrixInstance& MatrixInstance::operator=(const MatrixInstance&) = default;
 MatrixInstance& MatrixInstance::operator=(MatrixInstance&&) noexcept = default;
 
 MatrixInstance::MatrixInstance(HalFormat format, ExclusiveTo exclusiveTo, FqInstance&& fqInstance,
-                               VersionRange&& range, bool optional, bool isRegex)
+                               VersionRange&& range, bool isRegex)
     : mFormat(format),
       mExclusiveTo(exclusiveTo),
       mFqInstance(std::move(fqInstance)),
       mRange(std::move(range)),
-      mOptional(optional),
       mIsRegex(isRegex) {}
 
 MatrixInstance::MatrixInstance(HalFormat format, ExclusiveTo exclusiveTo,
-                               const FqInstance fqInstance, const VersionRange& range,
-                               bool optional, bool isRegex)
+                               const FqInstance fqInstance, const VersionRange& range, bool isRegex)
     : mFormat(format),
       mExclusiveTo(exclusiveTo),
       mFqInstance(fqInstance),
       mRange(range),
-      mOptional(optional),
       mIsRegex(isRegex) {}
 
 const std::string& MatrixInstance::package() const {
@@ -71,10 +68,6 @@ HalFormat MatrixInstance::format() const {
 
 ExclusiveTo MatrixInstance::exclusiveTo() const {
     return mExclusiveTo;
-}
-
-bool MatrixInstance::optional() const {
-    return mOptional;
 }
 
 bool MatrixInstance::isSatisfiedBy(const FqInstance& provided) const {

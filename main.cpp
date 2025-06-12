@@ -29,7 +29,7 @@
 
 using namespace ::android::vintf;
 
-static const std::string kColumnSeperator = "   ";
+static const std::string kColumnSeparator = "   ";
 
 std::string existString(bool value) {
     return value ? "GOOD" : "DOES NOT EXIST";
@@ -205,27 +205,12 @@ struct TableRow {
     bool fm = false;
     bool dcm = false;
     bool fcm = false;
-    // If the HAL version is in device / framework compatibility matrix, whether it is required
-    // or not.
-    bool required = false;
-
-    // Return true if:
-    // - not a required HAL version; OR
-    // - required in device matrix and framework manifest;
-    // - required in framework matrix and device manifest.
-    bool meetsReqeuirement() const {
-        if (!required) return true;
-        if (dcm && !fm) return false;
-        if (fcm && !dm) return false;
-        return true;
-    }
 };
 
 std::ostream& operator<<(std::ostream& out, const TableRow& row) {
-    return out << (row.required ? "R" : " ") << (row.meetsReqeuirement() ? " " : "!")
-               << kColumnSeperator << (row.dm ? "DM" : "  ") << kColumnSeperator
-               << (row.fm ? "FM" : "  ") << kColumnSeperator << (row.fcm ? "FCM" : "   ")
-               << kColumnSeperator << (row.dcm ? "DCM" : "   ");
+    return out << kColumnSeparator << (row.dm ? "DM" : "  ") << kColumnSeparator
+               << (row.fm ? "FM" : "  ") << kColumnSeparator << (row.fcm ? "FCM" : "   ")
+               << kColumnSeparator << (row.dcm ? "DCM" : "   ");
 }
 
 using RowMutator = std::function<void(TableRow*)>;
@@ -256,9 +241,6 @@ void insert(const CompatibilityMatrix* matrix, Table* table, const RowMutator& m
                 mutate(&(*table)[key]);
             } else {
                 mutate(&it->second);
-                if (minorVer == matrixInstance.versionRange().minMinor) {
-                    it->second.required = !matrixInstance.optional();
-                }
             }
         }
         return true;
@@ -301,8 +283,6 @@ void dumpLegacy(const ParsedOptions& options) {
 
     if (!options.verbose) {
         std::cout << "======== HALs =========" << std::endl
-                  << "R: required. (empty): optional or missing from matrices. "
-                  << "!: required and not in manifest." << std::endl
                   << "DM: device manifest. FM: framework manifest." << std::endl
                   << "FCM: framework compatibility matrix. DCM: device compatibility matrix."
                   << std::endl
@@ -310,7 +290,7 @@ void dumpLegacy(const ParsedOptions& options) {
         auto table = generateHalSummary(vm.get(), fm.get(), vcm.get(), fcm.get());
 
         for (const auto& pair : table)
-            std::cout << pair.second << kColumnSeperator << pair.first << std::endl;
+            std::cout << pair.second << kColumnSeparator << pair.first << std::endl;
 
         std::cout << std::endl;
     }

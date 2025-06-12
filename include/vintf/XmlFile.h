@@ -38,7 +38,6 @@ struct XmlFile {
 
 // An <xmlfile> entry in matrix
 struct MatrixXmlFile : public XmlFile {
-    inline bool optional() const { return mOptional; }
     inline XmlSchemaFormat format() const { return mFormat; }
     inline const VersionRange& versionRange() const { return mVersionRange; }
     bool operator==(const MatrixXmlFile& other) const;
@@ -47,7 +46,6 @@ struct MatrixXmlFile : public XmlFile {
     friend struct CompatibilityMatrix;
     friend struct MatrixXmlFileConverter;
     friend struct LibVintfTest;
-    bool mOptional;
     XmlSchemaFormat mFormat;
     VersionRange mVersionRange;
 };

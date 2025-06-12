@@ -91,7 +91,7 @@ struct HalManifest : public HalGroup<ManifestHal>,
                             CheckFlags::Type flags = CheckFlags::DEFAULT) const;
 
     // Generate a compatibility matrix such that checkCompatibility will return true.
-    CompatibilityMatrix generateCompatibleMatrix(bool optional = true) const;
+    CompatibilityMatrix generateCompatibleMatrix() const;
 
     // Returns all component names.
     std::set<std::string> getHalNames() const;
@@ -183,8 +183,6 @@ struct HalManifest : public HalGroup<ManifestHal>,
                                  std::string* error = nullptr);
 
     details::Instances expandInstances(const std::string& name) const;
-    // Check if all instances in matrixHal is supported in this manifest.
-    bool isCompatible(const details::Instances& instances, const MatrixHal& matrixHal) const;
 
     // Return a list of error messages (for each <hal> name) that does NOT conform to
     // the given compatibility matrix. It does not contain components that are optional.

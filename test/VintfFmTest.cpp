@@ -55,7 +55,10 @@ using std::string_literals::operator""s;
 
 static constexpr const char* gFakeRoot = "fake_root";
 static constexpr const char* gFakeSystemArg = "/system:fake_root/system";
+static constexpr const char* gBadFakeSystemArg = "/system:fake_root/bad_system";
 static constexpr const char* gFrameworkManifestPath = "fake_root/system/etc/vintf/manifest.xml";
+static constexpr const char* gBadFrameworkManifestPath =
+    "fake_root/bad_system/etc/vintf/bad_manifest.xml";
 static constexpr const char* gFrozenDir = "frozen";
 static constexpr const char* gFrameworkManifest = R"(
 <manifest version="2.0" type="framework">
@@ -77,6 +80,29 @@ static constexpr const char* gFrameworkManifest = R"(
   <hal format="aidl">
     <name>android.frameworks.no_level</name>
     <fqname>IAidl/default</fqname>
+  </hal>
+  <hal format="aidl" max-level="1">
+    <name>android.frameworks.level1</name>
+    <fqname>IAidl/default</fqname>
+  </hal>
+  <hal format="aidl" max-level="2">
+    <name>android.frameworks.level2</name>
+    <fqname>IAidl/default</fqname>
+  </hal>
+</manifest>)";
+// Missing the android.frameworks.no_level interface.
+// A missing interface is considered an error
+static constexpr const char* gBadFrameworkManifest = R"(
+<manifest version="2.0" type="framework">
+  <hal max-level="1">
+    <name>android.frameworks.level1</name>
+    <transport>hwbinder</transport>
+    <fqname>@1.0::IHidl/default</fqname>
+  </hal>
+  <hal max-level="2">
+    <name>android.frameworks.level2</name>
+    <transport>hwbinder</transport>
+    <fqname>@1.0::IHidl/default</fqname>
   </hal>
   <hal format="aidl" max-level="1">
     <name>android.frameworks.level1</name>
@@ -241,7 +267,6 @@ std::string createMatrixHal(HalFormat format, const std::string& package) {
     MatrixHal matrixHal{.format = format,
                         .name = package,
                         .versionRanges = versionRanges,
-                        .optional = false,
                         .interfaces = {{interface, HalInterface{interface, {"default"}}}}};
     return toXml(matrixHal);
 }
@@ -266,6 +291,11 @@ class VintfFmCheckTest : public VintfFmTest, public WithParamInterface<Level> {
                     return NAME_NOT_FOUND;
                 }
                 *fetched = it->second;
+                return OK;
+            }));
+        ON_CALL(*fs, fetch(PathEq(gBadFrameworkManifestPath), _, _))
+            .WillByDefault(Invoke([](const auto&, auto* fetched, auto*) {
+                *fetched = gBadFrameworkManifest;
                 return OK;
             }));
     }
@@ -311,6 +341,10 @@ class VintfFmCheckTest : public VintfFmTest, public WithParamInterface<Level> {
 TEST_P(VintfFmCheckTest, Check) {
     Args args({"vintffm", "--check", "--dirmap", gFakeSystemArg, gFrozenDir});
     EXPECT_EQ(EX_OK, vintffm->main(args.size(), args.get()));
+}
+TEST_P(VintfFmCheckTest, CheckMissingManifestHal) {
+    Args args({"vintffm", "--check", "--dirmap", gBadFakeSystemArg, gFrozenDir});
+    EXPECT_EQ(EX_SOFTWARE, vintffm->main(args.size(), args.get()));
 }
 
 INSTANTIATE_TEST_SUITE_P(VintfFmTest, VintfFmCheckTest,

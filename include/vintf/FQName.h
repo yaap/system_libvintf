@@ -34,8 +34,14 @@ struct FQName {
                                                    size_t minorVer, const std::string& name = "");
 
     const std::string& package() const;
-    // Return version in the form "1.0" if it is present, otherwise empty string.
+    // Return version in the form "1.0" for HIDL interfaces with major.minor versions,
+    // "1" for AIDL versions that have minor version set with `kFakeAidlMajorVersion` as
+    // the major version, and an empty string if there is no version set.
     std::string version() const;
+    // Same as version, but keeps the kFakeAidlMajorVersion in the string.
+    // This is still required for all of the parsing/assembling but not desired
+    // for logging and errors.
+    std::string parsedVersion() const;
     // Return true only if version is present.
     bool hasVersion() const;
     // Return pair of (major, minor) version. Defaults to 0, 0.
@@ -69,6 +75,10 @@ struct FQName {
     bool isInterfaceName() const;
 
     std::string string() const;
+    // Same as string, but keeps the kFakeAidlMajorVersion in the string.
+    // This is still required for all of the parsing/assembling but not desired
+    // for logging and errors.
+    std::string parsedString() const;
 
     bool operator<(const FQName& other) const;
     bool operator==(const FQName& other) const;
@@ -121,6 +131,10 @@ struct FQName {
     bool isIdentifier() const;
     // Return version in the form "@1.0" if it is present, otherwise empty string.
     std::string atVersion() const;
+    // Same as atVersion, but keeps the kFakeAidlMajorVersion in the string.
+    // This is still required for all of the parsing/assembling but not desired
+    // for logging and errors.
+    std::string parsedAtVersion() const;
 
     std::vector<std::string> getPackageComponents() const;
 };

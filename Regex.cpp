@@ -16,6 +16,8 @@
 
 #include "Regex.h"
 
+#include <memory>
+
 namespace android {
 namespace vintf {
 namespace details {

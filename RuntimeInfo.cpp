@@ -200,7 +200,10 @@ Level RuntimeInfo::gkiAndroidReleaseToLevel(uint64_t androidRelease) {
                 ret = Level::V;
             } break;
             case 16: {
-                ret = Level::W;
+                ret = Level::B;
+            } break;
+            case 17: {
+                ret = Level::C;
             } break;
             // Add more levels above this line.
             default: {

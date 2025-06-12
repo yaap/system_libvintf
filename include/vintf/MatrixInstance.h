@@ -38,13 +38,12 @@ class MatrixInstance {
     using VersionType = VersionRange;
     // fqInstance.version is ignored. Version range is provided separately.
     MatrixInstance(HalFormat format, ExclusiveTo exclusiveTo, FqInstance&& fqInstance,
-                   VersionRange&& range, bool optional, bool isRegex);
+                   VersionRange&& range, bool isRegex);
     MatrixInstance(HalFormat format, ExclusiveTo exclusiveTo, const FqInstance fqInstance,
-                   const VersionRange& range, bool optional, bool isRegex);
+                   const VersionRange& range, bool isRegex);
     const std::string& package() const;
     const VersionRange& versionRange() const;
     std::string interface() const;
-    bool optional() const;
     HalFormat format() const;
     ExclusiveTo exclusiveTo() const;
 
@@ -80,7 +79,6 @@ class MatrixInstance {
     ExclusiveTo mExclusiveTo = ExclusiveTo::EMPTY;
     FqInstance mFqInstance;
     VersionRange mRange;
-    bool mOptional = false;
     bool mIsRegex = false;
 };
 

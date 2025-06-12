@@ -15,7 +15,8 @@
  */
 #include "Apex.h"
 
-#include <android-base/format.h>
+#include <format>
+
 #include <android-base/logging.h>
 #include <android-base/strings.h>
 
@@ -25,6 +26,15 @@
 using android::base::StartsWith;
 
 namespace android::vintf::apex {
+
+namespace {
+// Partition tags used in apex-info-list.xml
+constexpr const char* SYSTEM = "SYSTEM";
+constexpr const char* SYSTEM_EXT = "SYSTEM_EXT";
+constexpr const char* PRODUCT = "PRODUCT";
+constexpr const char* VENDOR = "VENDOR";
+constexpr const char* ODM = "ODM";
+}  // namespace
 
 static bool isApexReady(PropertyFetcher* propertyFetcher) {
 #ifdef LIBVINTF_TARGET
@@ -71,7 +81,7 @@ static status_t GetVintfDirs(FileSystem* fileSystem, PropertyFetcher* propertyFe
         if (!apexInfo.getIsActive()) continue;
 
         if (filter(apexInfo.getPartition())) {
-            dirs->push_back(fmt::format("{}/{}/" VINTF_SUB_DIR, apexDir, apexInfo.getModuleName()));
+            dirs->push_back(std::format("{}/{}/" VINTF_SUB_DIR, apexDir, apexInfo.getModuleName()));
         }
     }
     LOG(INFO) << "Loaded APEX Infos from " << apexInfoFile;
@@ -97,18 +107,24 @@ std::optional<timespec> GetModifiedTime(FileSystem* fileSystem, PropertyFetcher*
     return mtime;
 }
 
-status_t GetDeviceVintfDirs(FileSystem* fileSystem, PropertyFetcher* propertyFetcher,
+status_t GetVendorVintfDirs(FileSystem* fileSystem, PropertyFetcher* propertyFetcher,
                             std::vector<std::string>* dirs, std::string* error) {
     return GetVintfDirs(fileSystem, propertyFetcher, dirs, error, [](const std::string& partition) {
-        return partition.compare("VENDOR") == 0 || partition.compare("ODM") == 0;
+        return partition.compare(VENDOR) == 0;
     });
+}
+
+status_t GetOdmVintfDirs(FileSystem* fileSystem, PropertyFetcher* propertyFetcher,
+                         std::vector<std::string>* dirs, std::string* error) {
+    return GetVintfDirs(fileSystem, propertyFetcher, dirs, error,
+                        [](const std::string& partition) { return partition.compare(ODM) == 0; });
 }
 
 status_t GetFrameworkVintfDirs(FileSystem* fileSystem, PropertyFetcher* propertyFetcher,
                                std::vector<std::string>* dirs, std::string* error) {
     return GetVintfDirs(fileSystem, propertyFetcher, dirs, error, [](const std::string& partition) {
-        return partition.compare("SYSTEM") == 0 || partition.compare("SYSTEM_EXT") == 0 ||
-               partition.compare("PRODUCT") == 0;
+        return partition.compare(SYSTEM) == 0 || partition.compare(SYSTEM_EXT) == 0 ||
+               partition.compare(PRODUCT) == 0;
     });
 }
 
