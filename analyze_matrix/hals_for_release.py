@@ -36,6 +36,7 @@ import enum
 import json
 import logging
 import os
+import re
 import subprocess
 from collections.abc import Sequence
 from typing import Any
@@ -180,6 +181,10 @@ def ReadMatrices(args: argparse.Namespace) -> dict[int, MatrixData]:
   matrices = dict()
   for child in os.listdir(args.input):
     file = os.path.join(args.input, child)
+    pattern = r"compatibility_matrix\.\d+\.xml$"
+    if re.search(pattern, file) is None:
+      logger.debug("Ignoring file %s", file)
+      continue
     level, level_name = GetLevel(args.analyze_matrix, file), GetLevelName(args.analyze_matrix, file)
     if level is None:
       logger.debug("Ignoring file %s", file)
