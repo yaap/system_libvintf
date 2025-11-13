@@ -126,8 +126,10 @@ public:
                                   std::string* e) {
         return cm1->addAllXmlFilesAsOptional(cm2, e);
     }
-    std::set<std::string> checkUnusedHals(const HalManifest& m, const CompatibilityMatrix& cm) {
-        return m.checkUnusedHals(cm, {});
+    std::set<std::string> checkUnusedHals(const HalManifest& m, const CompatibilityMatrix& cm,
+                                          bool shouldCheckInstanceName = true) {
+        return m.checkUnusedHals(cm, {}, [](const std::string&) { return true; },
+                                 shouldCheckInstanceName);
     }
     Level getLevel(const KernelInfo& ki) { return ki.level(); }
     static status_t parseGkiKernelRelease(RuntimeInfo::FetchFlags flags,
@@ -4057,6 +4059,10 @@ TEST_F(LibVintfTest, RegexInstanceCompat) {
                                          "android.hardware.foo@1.0::IFoo/legacy/0/nonmatch",
                                          "android.hardware.foo@1.0::IFoo/legacy0"}),
                   unused);
+
+        unused = checkUnusedHals(manifest, matrix, false /* shouldCheckInstanceName */);
+        // No unused HALs if checking at the interface level.
+        EXPECT_TRUE(unused.empty()) << android::base::Join(unused, "\n");
     }
 }
 
@@ -4559,6 +4565,38 @@ TEST_F(LibVintfTest, AidlAndHidlCheckUnused) {
     EXPECT_TRUE(fromXml(&manifest, manifestXml, &error)) << error;
     EXPECT_TRUE(fromXml(&matrix, matrixXml, &error)) << error;
     auto unused = checkUnusedHals(manifest, matrix);
+    EXPECT_TRUE(unused.empty()) << android::base::Join(unused, "\n");
+}
+
+TEST_F(LibVintfTest, AidlCheckUnusedForUnrelatedInstance) {
+    std::string manifestXml =
+        "<manifest " + kMetaVersionStr + " type=\"framework\">\n"
+        "    <hal format=\"aidl\">\n"
+        "        <name>android.system.foo</name>\n"
+        "        <fqname>IFoo/vendor</fqname>\n"
+        "    </hal>\n"
+        "</manifest>\n";
+        std::string matrixXml =
+            "<compatibility-matrix " + kMetaVersionStr + " type=\"device\">\n"
+            "    <hal format=\"aidl\">\n"
+            "        <name>android.system.foo</name>\n"
+            "        <interface>\n"
+            "            <name>IFoo</name>\n"
+            "            <instance>default</instance>\n"
+            "        </interface>\n"
+            "    </hal>\n"
+        "</compatibility-matrix>\n";
+    std::string error;
+    HalManifest manifest;
+    CompatibilityMatrix matrix;
+    EXPECT_TRUE(fromXml(&manifest, manifestXml, &error)) << error;
+    EXPECT_TRUE(fromXml(&matrix, matrixXml, &error)) << error;
+
+    auto unused = checkUnusedHals(manifest, matrix);
+    EXPECT_EQ((std::set<std::string>{"android.system.foo.IFoo/vendor (@1)"}),
+              unused);
+
+    unused = checkUnusedHals(manifest, matrix, false /* shouldCheckInstanceName */);
     EXPECT_TRUE(unused.empty()) << android::base::Join(unused, "\n");
 }
 

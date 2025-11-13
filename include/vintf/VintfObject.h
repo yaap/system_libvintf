@@ -188,6 +188,18 @@ class VintfObject {
      * Check that there are no unused HALs in HAL manifests. Currently, only
      * device manifest is checked against framework compatibility matrix.
      *
+     * Use the `shouldCheckPackage` function to filter out or ignore HALs based on
+     * the package name `ManifestInstance::package()`. Return true if we want
+     * to check that particular manifest instance.
+     *
+     * If shouldCheckInstanceName, a HAL android.foo.Ifoo/vendor is considered
+     * unused even if android.foo.Ifoo/default is in the framework compatibility
+     * matrix (i.e. it is used). If shouldCheckInstanceName is false, a HAL
+     * android.foo.Ifoo/vendor is considered used if android.foo.Ifoo/default
+     * is in the framework compatibility matrix. Setting it to false is useful
+     * when android.foo.Ifoo/vendor is in the product/system_ext FCM, but they
+     * are not visible during VTS tests.
+     *
      * Return result:
      * - result.ok() if no unused HALs
      * - !result.ok() && result.error().code() == 0 if with unused HALs. Check
@@ -196,7 +208,9 @@ class VintfObject {
      *     result.error() for detailed message.
      */
     android::base::Result<void> checkUnusedHals(
-        const std::vector<HidlInterfaceMetadata>& hidlMetadata);
+        const std::vector<HidlInterfaceMetadata>& hidlMetadata,
+        const std::function<bool(const std::string&)>& shouldCheckPackage,
+        bool shouldCheckInstanceName);
 
     // Check that all HALs are added to any framework compatibility matrix.
     // If shouldCheck is set, only check if:

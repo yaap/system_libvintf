@@ -197,9 +197,12 @@ struct HalManifest : public HalGroup<ManifestHal>,
     // required HAL.
     // That is, return empty list iff
     // (instance in manifest) => (instance in matrix).
+    // `shouldCheckPackage` allows the caller to pick and choose which HALs to
+    // check based on their package name.
     std::set<std::string> checkUnusedHals(
-        const CompatibilityMatrix& mat,
-        const std::vector<HidlInterfaceMetadata>& hidlMetadata) const;
+        const CompatibilityMatrix& mat, const std::vector<HidlInterfaceMetadata>& hidlMetadata,
+        const std::function<bool(const std::string&)>& shouldCheckPackage,
+        bool shouldCheckInstanceName) const;
 
     // Check that manifest has no entries.
     bool empty() const;

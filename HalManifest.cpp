@@ -347,7 +347,9 @@ void multilineIndent(std::ostream& os, size_t indent, const Container& lines) {
 }
 
 std::set<std::string> HalManifest::checkUnusedHals(
-    const CompatibilityMatrix& mat, const std::vector<HidlInterfaceMetadata>& hidlMetadata) const {
+    const CompatibilityMatrix& mat, const std::vector<HidlInterfaceMetadata>& hidlMetadata,
+    const std::function<bool(const std::string&)>& shouldCheckPackage,
+    bool shouldCheckInstanceName) const {
     std::multimap<std::string, std::string> childrenMap;
     for (const auto& child : hidlMetadata) {
         for (const auto& parent : child.inherited) {
@@ -357,11 +359,24 @@ std::set<std::string> HalManifest::checkUnusedHals(
 
     std::set<std::string> ret;
 
-    forEachInstance([&ret, &mat, &childrenMap](const auto& manifestInstance) {
-        if (mat.matchInstance(manifestInstance.format(), manifestInstance.exclusiveTo(),
-                              manifestInstance.package(), manifestInstance.version(),
-                              manifestInstance.interface(), manifestInstance.instance())) {
+    forEachInstance([&ret, &mat, &childrenMap, &shouldCheckPackage,
+                     shouldCheckInstanceName](const auto& manifestInstance) {
+        // Don't report this instance as unused if the caller doesn't want it
+        // checked.
+        if (!shouldCheckPackage(manifestInstance.package())) return true;
+
+        if (shouldCheckInstanceName &&
+            mat.matchInstance(manifestInstance.format(), manifestInstance.exclusiveTo(),
+                               manifestInstance.package(), manifestInstance.version(),
+                               manifestInstance.interface(), manifestInstance.instance())) {
             // manifestInstance exactly matches an instance in |mat|.
+            return true;
+        }
+        if (!shouldCheckInstanceName &&
+            mat.matchInterface(manifestInstance.format(), manifestInstance.exclusiveTo(),
+                               manifestInstance.package(), manifestInstance.version(),
+                               manifestInstance.interface())) {
+            // manifestInstance exactly matches an interface in |mat|.
             return true;
         }
         // For HIDL instances, If foo@2.0 inherits from foo@1.0, manifest may contain both, but
@@ -374,9 +389,15 @@ std::set<std::string> HalManifest::checkUnusedHals(
             for (auto it = range.first; it != range.second; ++it) {
                 details::FQName fqName;
                 CHECK(fqName.setTo(it->second));
-                if (mat.matchInstance(manifestInstance.format(), manifestInstance.exclusiveTo(),
-                                      fqName.package(), fqName.getVersion(), fqName.name(),
-                                      manifestInstance.instance())) {
+                if (shouldCheckInstanceName &&
+                    mat.matchInstance(manifestInstance.format(), manifestInstance.exclusiveTo(),
+                                       fqName.package(), fqName.getVersion(), fqName.name(),
+                                       manifestInstance.instance())) {
+                    return true;
+                }
+                if (!shouldCheckInstanceName &&
+                    mat.matchInterface(manifestInstance.format(), manifestInstance.exclusiveTo(),
+                                       fqName.package(), fqName.getVersion(), fqName.name())) {
                     return true;
                 }
             }
