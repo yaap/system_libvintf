@@ -46,8 +46,6 @@ class AssembleVintfTest : public ::testing::Test {
         s = makeStream("");
         mErrorStream = s.get();
         mInstance->setErrorStream(std::move(s));
-
-        getInstance()->setFakeEnv("PRODUCT_ENFORCE_VINTF_MANIFEST", "true");
     }
     virtual void TearDown() override { mInstance = nullptr; }
 
@@ -248,7 +246,6 @@ TEST_F(AssembleVintfTest, FrameworkMatrix) {
     addInput("compatibility_matrix.2.xml", xml2);
     addInput("compatibility_matrix.3.xml", xml3);
     addInput("compatibility_matrix.empty.xml", xmlEmpty);
-    getInstance()->setFakeEnv("PRODUCT_ENFORCE_VINTF_MANIFEST", "true");
 
     resetOutput();
     getInstance()->setCheckInputStream("check.xml", makeStream(manifest(1)));
