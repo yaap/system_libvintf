@@ -317,12 +317,10 @@ class AssembleVintfImpl : public AssembleVintf {
 
     // If -c is provided, check it.
     bool checkDualFile(const HalManifest& manifest, const CompatibilityMatrix& matrix) {
-        if (getBooleanFlag("PRODUCT_ENFORCE_VINTF_MANIFEST")) {
-            std::string error;
-            if (!manifest.checkCompatibility(matrix, &error, mCheckFlags)) {
-                err() << "Not compatible: " << error << std::endl;
-                return false;
-            }
+        std::string error;
+        if (!manifest.checkCompatibility(matrix, &error, mCheckFlags)) {
+            err() << "Not compatible: " << error << std::endl;
+            return false;
         }
         return true;
     }
@@ -592,10 +590,8 @@ class AssembleVintfImpl : public AssembleVintf {
                 return false;
             }
 
-            if (!getBooleanFlag("VINTF_IGNORE_TARGET_FCM_VERSION") &&
-                !getBooleanFlag("PRODUCT_ENFORCE_VINTF_MANIFEST")) {
-                halManifest->mLevel = Level::LEGACY;
-            }
+            // PRODUCT_ENFORCE_VINTF_MANIFEST is assumed to be true, so
+            // halManifest->mLevel is never LEGACY.
 
             if (!setDeviceManifestKernel(halManifest)) {
                 return false;
