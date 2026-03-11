@@ -16,6 +16,9 @@
 
 #include "KernelConfigs.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include <android-base/logging.h>
 
 #include <map>
@@ -24,7 +27,16 @@
 #include <zlib.h>
 #include "vintf/KernelConfigParser.h"
 
+#ifdef _WIN32
+static inline size_t getPageSize() {
+    SYSTEM_INFO si;
+    GetSystemInfo(&si);
+    return si.dwAllocationGranularity;
+}
+#define BUFFER_SIZE getPageSize()
+#else
 #define BUFFER_SIZE sysconf(_SC_PAGESIZE)
+#endif
 
 namespace android {
 namespace kernelconfigs {
