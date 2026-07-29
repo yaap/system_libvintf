@@ -1,4 +1,5 @@
-// Signature format: 2.0
+// Signature format: 6.0
+// - style=java
 package compatibility.matrix {
 
   public class Avb {
@@ -50,11 +51,11 @@ package compatibility.matrix {
     ctor public Hal();
     method public String getExclusiveTo();
     method public String getFormat();
-    method public java.util.List<java.lang.String> getFqname();
+    method public java.util.List<String> getFqname();
     method public String getName();
     method public String getOptional();
     method public boolean getUpdatableViaApex();
-    method public java.util.List<java.lang.String> getVersion();
+    method public java.util.List<String> getVersion();
     method public java.util.List<compatibility.matrix.Interface> get_interface();
     method public void setExclusiveTo(String);
     method public void setFormat(String);
@@ -65,9 +66,9 @@ package compatibility.matrix {
 
   public class Interface {
     ctor public Interface();
-    method public java.util.List<java.lang.String> getInstance();
+    method public java.util.List<String> getInstance();
     method public String getName();
-    method public java.util.List<java.lang.String> getRegexInstance();
+    method public java.util.List<String> getRegexInstance();
     method public void setName(String);
   }
 
@@ -90,25 +91,25 @@ package compatibility.matrix {
   public class Sepolicy {
     ctor public Sepolicy();
     method public String getKernelSepolicyVersion();
-    method public java.util.List<java.lang.String> getSepolicyVersion();
+    method public java.util.List<String> getSepolicyVersion();
     method public void setKernelSepolicyVersion(String);
   }
 
   public class SystemSdk {
     ctor public SystemSdk();
-    method public java.util.List<java.lang.String> getVersion();
+    method public java.util.List<String> getVersion();
   }
 
   public class VendorNdk {
     ctor public VendorNdk();
-    method public java.util.List<java.lang.String> getLibrary();
+    method public java.util.List<String> getLibrary();
     method public String getVersion();
     method public void setVersion(String);
   }
 
   public class Vndk {
     ctor public Vndk();
-    method public java.util.List<java.lang.String> getLibrary();
+    method public java.util.List<String> getLibrary();
     method public String getVersion();
     method public void setVersion(String);
   }

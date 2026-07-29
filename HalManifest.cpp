@@ -509,12 +509,13 @@ bool HalManifest::checkCompatibility(const CompatibilityMatrix& mat, std::string
         // Note that shouldCheckKernelCompatibility() only returns true on host, because the
         // on-device HalManifest does not have kernel version set. On the device, kernel information
         // is retrieved from RuntimeInfo.
-        Level kernelTagLevel = kernel()->level();
-        if (flags.isKernelEnabled() && shouldCheckKernelCompatibility() &&
-            kernel()
-                ->getMatchedKernelRequirements(mat.framework.mKernels, kernelTagLevel, error)
-                .empty()) {
-            return false;
+        if (flags.isKernelEnabled() && shouldCheckKernelCompatibility()) {
+            Level kernelTagLevel = kernel()->level();
+            if (kernel()
+                    ->getMatchedKernelRequirements(mat.framework.mKernels, kernelTagLevel, error)
+                    .empty()) {
+                return false;
+            }
         }
     }
 
